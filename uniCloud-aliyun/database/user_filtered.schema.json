@@ -1,0 +1,1 @@
+{"bsonType":"object","permission":{"read":true,"create":true,"update":true,"delete":true},"properties":{"_id":{"description":"存储文档 ID（用户 ID），系统自动生成"},"username":{"bsonType":"string","title":"用户名"},"nickname":{"bsonType":"string","title":"昵称"},"mobile":{"bsonType":"string","title":"手机号码"},"email":{"bsonType":"string","title":"邮箱"},"address":{"bsonType":"string","title":"地址"}}}

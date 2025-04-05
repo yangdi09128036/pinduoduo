@@ -1,0 +1,126 @@
+
+.pay-container {
+		position: fixed;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		top: 0;
+		background-color: rgba(0, 0, 0, 0.5);
+		display: flex;
+		flex-direction: column;
+		justify-content: flex-end;
+}
+.pay-popup {
+		background-color: #fff;
+		border-radius: 24rpx 24rpx 0 0;
+		padding: 40rpx;
+		position: relative;
+		animation: slideUp 0.3s ease-out;
+}
+@keyframes slideUp {
+from {
+			transform: translateY(100%);
+}
+to {
+			transform: translateY(0);
+}
+}
+.close-btn {
+		position: absolute;
+		top: 20rpx;
+		left: 20rpx;
+		padding: 20rpx;
+}
+.close-icon {
+		font-size: 60rpx;
+		color: #999;
+}
+.user-info {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		margin-bottom: 40rpx;
+}
+.user-avatar {
+		width: 120rpx;
+		height: 120rpx;
+		border-radius: 60rpx;
+		margin-bottom: 20rpx;
+}
+.user-phone {
+		font-size: 32rpx;
+		color: #333;
+}
+.merchant-info {
+		text-align: center;
+		margin-bottom: 60rpx;
+}
+.merchant-name {
+		font-size: 28rpx;
+		color: #666;
+		margin-bottom: 20rpx;
+		display: block;
+}
+.payment-amount {
+		font-size: 72rpx;
+		font-weight: bold;
+		color: #333;
+}
+.account-section {
+		padding: 20rpx 0;
+		border-bottom: 1px solid #eee;
+		margin-bottom: 20rpx;
+}
+.section-title {
+		font-size: 28rpx;
+		color: #999;
+		margin-bottom: 10rpx;
+}
+.account-number {
+		font-size: 32rpx;
+		color: #333;
+}
+.payment-methods {
+		margin-bottom: 40rpx;
+}
+.method-item {
+		display: flex;
+		align-items: center;
+		padding: 30rpx 0;
+		border-radius: 15rpx;
+		border-bottom: 1px solid #eee;
+}
+.method-icon {
+		width: 48rpx;
+		height: 48rpx;
+		margin-right: 20rpx;
+}
+.method-name {
+		flex: 1;
+		font-size: 28rpx;
+		color: #333;
+}
+.method-check {
+		color: #1890ff;
+		font-size: 32rpx;
+}
+.confirm-btn {
+		background-color: #1890ff;
+		color: #fff;
+		font-size: 32rpx;
+		height: 88rpx;
+		line-height: 88rpx;
+		border-radius: 44rpx;
+		margin: 40rpx 0;
+}
+.service-provider {
+		text-align: center;
+		padding: 20rpx 0;
+}
+.provider-text {
+		font-size: 24rpx;
+		color: #999;
+}
+.selected {
+		background-color: #f8f8f8;
+}

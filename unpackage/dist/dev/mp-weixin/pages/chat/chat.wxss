@@ -1,0 +1,253 @@
+
+.container {
+		width: 100%;
+		height: 100vh;
+		background: #fff;
+		display: flex;
+		flex-direction: column;
+}
+
+	/* 历史记录侧边栏 */
+.history-sidebar {
+		position: fixed;
+		top: 0;
+		left: -100vw; /* 修改为vw单位 */
+		width: 80vw; /* 修改为vw单位 */
+		height: 100vh;
+		background: #fff;
+		z-index: 1000;
+		transition: left 0.3s ease;
+		box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+.show-sidebar {
+		left: 0;
+}
+.history-content {
+		height: calc(100% - 135rpx);
+		overflow-y: auto;
+		padding: 20rpx;
+}
+.history-date {
+		font-size: 24rpx;
+		color: #999;
+		padding: 20rpx 0;
+}
+.history-item {
+		font-size: 28rpx;
+		padding: 20rpx 0;
+		border-bottom: 1rpx solid #eee;
+}
+.user-info {
+		height: 100rpx;
+		display: flex;
+		align-items: center;
+		padding: 0 20rpx;
+		border-top: 1rpx solid #eee;
+}
+.user-avatar {
+		width: 60rpx;
+		height: 60rpx;
+		border-radius: 50%;
+		margin-right: 20rpx;
+}
+.user-phone {
+		font-size: 28rpx;
+		color: #333;
+}
+
+	/* 主内容区域 */
+.main-content {
+		height: 100vh;
+		display: flex;
+		flex-direction: column;
+		transition: transform 0.3s ease;
+		width: 100%;
+		position: relative;
+}
+.shift-content {
+		transform: translateX(85vw); /* 修改为vw单位，与侧边栏宽度保持一致 */
+}
+
+	/* 顶部栏 */
+.header {
+		height: 88rpx;
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		padding: 0 20rpx;
+		border-bottom: 1rpx solid #eee;
+		position: -webkit-sticky;
+		position: sticky; /* 修改为sticky */
+		top: 50rpx;
+		left: 0;
+		right: 0;
+		background: #fff;
+		z-index: 10;
+}
+.menu-button,
+	.new-chat-button,
+	.voice-button,
+	.voice-role-button {
+		width: 50rpx;
+		height: 50rpx;
+		padding: 0;
+		margin: 0;
+		background: none;
+}
+.menu-button image,
+	.new-chat-button image,
+	.voice-button image,
+	.voice-role-button image {
+		width: 50rpx;
+		height: 50rpx;
+}
+.header-title {
+		font-size: 32rpx;
+		font-weight: 500;
+		max-width: 60%;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+}
+
+	/* 欢迎页面 */
+.welcome-screen {
+		height: 100%;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		padding: 0 60rpx;
+}
+.welcome-logo {
+		width: 160rpx;
+		height: 160rpx;
+		margin-bottom: 40rpx;
+		border-radius: 20px;
+}
+.welcome-title {
+		font-size: 40rpx;
+		font-weight: bold;
+		margin-bottom: 20rpx;
+}
+.welcome-subtitle {
+		font-size: 28rpx;
+		color: #666;
+		text-align: center;
+		line-height: 1.5;
+}
+
+	/* 聊天内容区域 */
+.chat-content {
+		flex: 1;
+		overflow-y: auto;
+		padding-top: 50rpx;
+		padding-bottom: 30rpx; /* 调整为与input-section高度匹配 */
+		height: calc(100vh - 88rpx - 120rpx); /* 计算高度: 视口高度 - 头部高度 - 底部输入区高度 */
+}
+.messages-container {
+		padding: 20rpx;
+}
+.message-wrapper {
+		margin-bottom: 30rpx;
+		display: flex;
+		align-items: flex-start;
+}
+.avatar {
+		width: 80rpx;
+		height: 80rpx;
+		border-radius: 50%;
+		margin-right: 20rpx;
+}
+.message-content {
+		max-width: calc(90% - 100rpx);
+		padding: 20rpx;
+		border-radius: 12rpx;
+		font-size: 28rpx;
+		line-height: 1.5;
+}
+.user-message {
+		flex-direction: row-reverse;
+}
+.user-message .avatar {
+		margin-right: 0;
+		margin-left: 20rpx;
+}
+.user-message .message-content {
+		background: #e6f7ff;
+		color: #333;
+}
+.ai-message .message-content {
+		background: #f5f5f5;
+		color: #333;
+}
+.message-actions {
+		display: flex;
+		gap: 20rpx;
+		margin-top: 16rpx;
+}
+.action-button {
+		padding: 0;
+		margin: 0;
+		background: none;
+		width: 40rpx;
+		height: 40rpx;
+}
+.action-button image {
+		width: 32rpx;
+		height: 32rpx;
+		opacity: 0.6;
+}
+
+	/* 底部输入区域 */
+.input-section {
+		padding: 20rpx;
+		border-top: 1rpx solid #eee;
+		position: -webkit-sticky;
+		position: sticky; /* 修改为sticky */
+		bottom: 0;
+		left: 0;
+		right: 0;
+		background: #fff;
+		z-index: 10;
+}
+.input-wrapper {
+		display: flex;
+		align-items: center;
+		gap: 20rpx;
+}
+.input-field {
+		flex: 1;
+		height: 80rpx;
+		padding: 0 30rpx;
+		font-size: 28rpx;
+		background: #f5f5f5;
+		border-radius: 40rpx;
+}
+.send-button {
+		width: 120rpx;
+		height: 80rpx;
+		line-height: 80rpx;
+		text-align: center;
+		background: #4e7cff;
+		color: #fff;
+		border-radius: 40rpx;
+		font-size: 28rpx;
+		padding: 0;
+}
+.send-button-active {
+		background: #4e7cff;
+		color: #fff;
+}
+.feedback-toast {
+		position: fixed;
+		bottom: 500rpx; /* 调整位置，避免与输入区重叠 */
+		left: 50%;
+		transform: translateX(-50%);
+		background: rgba(0, 0, 0, 0.7);
+		color: #fff;
+		padding: 20rpx 30rpx;
+		border-radius: 10rpx;
+		font-size: 28rpx;
+		z-index: 1001;
+}

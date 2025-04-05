@@ -1,0 +1,7 @@
+{
+  "name": "getHomePageData",
+  "dependencies": {},
+  "extensions": {
+    "uni-cloud-jql": {}
+  }
+}

@@ -1,0 +1,106 @@
+{
+	"bsonType": "object",
+	"title": "订单信息模式",
+	"description": "用于描述订单详情的结构化数据模式",
+	"properties": {
+		"_id": {
+			"bsonType": "objectId",
+			"title": "订单ID",
+			"description": "订单ID，系统自动生成的核心唯一标识字段"
+		},
+		"userId": {
+			"bsonType": "objectId",
+			"title": "用户ID",
+			"description": "用户ID（外键，关联用户表），代表订单所属用户的重要信息字段",
+			"required": true
+		},
+		"productId": {
+			"type": "array",
+			"title": "商品ID",
+			"default": [],
+			"description": "商品ID（外键，关联商品表），提供订单商品指向的关键信息字段",
+			"items": {
+				"type": "objectId"
+			},
+			"required": true
+		},
+		"productName": {
+			"bsonType": "string",
+			"title": "商品名称",
+			"description": "订单中商品的名称"
+		},
+		"productImage": {
+			"bsonType": "string",
+			"title": "商品图片",
+			"description": "订单中商品的图片URL"
+		},
+		"quantity": {
+			"bsonType": "int",
+			"title": "购买数量",
+			"description": "用户购买商品的数量，订单商品数量的计量标准字段",
+			"minimum": 1
+		},
+		"amount": {
+			"bsonType": "double",
+			"title": "订单总金额",
+			"description": "订单最终结算金额（保留两位小数），反映订单支付金额的核心财务信息字段"
+		},
+		"paymentStatus": {
+			"bsonType": "int",
+			"title": "支付状态",
+			"description": "订单支付状态，用数字选项表示不同状态（0: 待支付；1: 已支付；2：取消）",
+			"enum": [0, 1, 2]
+		},
+		"shareStatus": {
+			"bsonType": "int",
+			"title": "分享状态",
+			"description": "订单分享状态，用数字选项表示不同状态（0: 待分享；1: 已分享）",
+			"enum": [0, 1]
+		},
+		"shippingStatus": {
+			"bsonType": "int",
+			"title": "发货状态",
+			"description": "订单发货状态，用数字选项表示不同状态（0: 待发货；1: 已发货）",
+			"enum": [0, 1]
+		},
+		"deliveryStatus": {
+			"bsonType": "int",
+			"title": "配送状态",
+			"description": "订单配送状态，用数字选项表示不同状态（0: 待收货；1: 已收货）",
+			"enum": [0, 1]
+		},
+		"reviewStatus": {
+			"bsonType": "int",
+			"title": "评价状态",
+			"description": "订单评价状态，用数字选项表示不同状态（0: 待评价；1: 已评价）",
+			"enum": [0, 1]
+		},
+		"review": {
+			"bsonType": "string",
+			"title": "商品评价",
+			"description": "订单商品评价"
+		},
+		"createdAt": {
+			"bsonType": "timestamp",
+			"title": "订单创建时间",
+			"description": "订单创建的具体时间，记录订单生成时间点的关键信息字段",
+			"forceDefaultValue": {
+				"$env": "now"
+			}
+		},
+		"updatedAt": {
+			"bsonType": "timestamp",
+			"title": "订单更新时间",
+			"description": "订单信息最后更新的时间，保存订单数据变更最新时间点的重要信息字段"
+		}
+	},
+	"required": ["userId", "productId"],
+	"permission": {
+		"title": "权限",
+		"description": "关于订单数据的权限控制信息",
+		"read": true,
+		"create": true,
+		"update": true,
+		"delete": true
+	}
+}

@@ -1,0 +1,10 @@
+{
+  "enablePullDownRefresh": false,
+  "navigationBarTitleText": "注册管理员账号",
+  "usingComponents": {
+    "uni-easyinput": "../../../uni-easyinput/components/uni-easyinput/uni-easyinput",
+    "uni-forms-item": "../../../uni-forms/components/uni-forms-item/uni-forms-item",
+    "uni-id-pages-agreements": "../../components/uni-id-pages-agreements/uni-id-pages-agreements",
+    "uni-forms": "../../../uni-forms/components/uni-forms/uni-forms"
+  }
+}

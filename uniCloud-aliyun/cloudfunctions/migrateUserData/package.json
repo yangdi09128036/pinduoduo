@@ -1,0 +1,7 @@
+{
+  "name": "migrateUserData",
+  "dependencies": {},
+  "extensions": {
+    "uni-cloud-jql": {}
+  }
+}

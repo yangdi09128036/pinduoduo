@@ -1,0 +1,24 @@
+// 文档教程: https://uniapp.dcloud.net.cn/uniCloud/schema
+{
+	"bsonType": "object",
+	"required": ["banner_imgs"],
+	"permission": {
+		"read": true,
+		"create": true,
+		"update": true,
+		"delete": true
+	},
+	"properties": {
+		"_id": {
+			"description": "ID，系统自动生成"
+		},
+		"banner_imgs": {
+		  "bsonType": "array",
+		  "items": {
+		    "bsonType": "file"
+		  },
+		  "title": "Banner 图",
+		  "description": "Banner 图文件列表"
+		}
+	}
+}
