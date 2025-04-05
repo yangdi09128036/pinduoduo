@@ -1,7 +1,4 @@
-以下是一个完整的 `README.md` 文件内容，你可以直接复制到你的 GitHub 仓库中：
-
-```markdown
-# 仿「拼多多」移动端购物平台 (UniApp + UniCloud)
+仿「拼多多」移动端购物平台 (UniApp + UniCloud)
 
 基于 UniApp 和 UniCloud 开发的仿「拼多多」移动端购物平台，实现了完整的电商购物流程和创新的 AI 对话功能。
 
