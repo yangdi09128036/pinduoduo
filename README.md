@@ -39,7 +39,7 @@
 👉 [点击这里直接体验](https://static-mp-0dcd11a4-5797-4c2e-9b6e-d28808479dcd.next.bspapp.com/)
 
 ### 下载APK
-前往 [Releases](https://github.com/yangdi09128036/pinduoduo-uniapp/releases) 下载最新APK安装包
+前往 [Releases](https://github.com/yangdi09128036/pinduoduo-uniapp/releases) 下载最新APK安装包（可能会稍慢，取决于你的网络）
 
 ## 本地运行
 
@@ -53,7 +53,7 @@
 #### 安装Git Bash (Windows)
 1. 访问 [Git官网](https://git-scm.com/) 下载安装包
 2. 运行下载的安装程序
-3. 安装过程中保持默认选项即可
+3. 安装过程中保持默认选项（一直下一步）即可
 4. 安装完成后，在任意文件夹右键可以看到 "Git Bash Here" 选项
 
 #### 克隆仓库
@@ -82,7 +82,7 @@ pinduoduo-uniapp/
 ## 注意事项
 
 1. 本项目使用UniCloud作为后端服务，如需完整功能需要配置自己的UniCloud服务空间
-2. AI对话功能需要自行配置Kimi API密钥
+2. AI对话功能已经配置好Kimi API密钥，可以更为其他的AI的API key，如deepseek，豆包等
 3. 支付功能为模拟实现，不涉及真实支付
 
 ## 开发计划
