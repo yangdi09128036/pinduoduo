@@ -43,7 +43,7 @@
 👉 [点击这里直接体验(需要自行进行注册)](https://static-mp-0dcd11a4-5797-4c2e-9b6e-d28808479dcd.next.bspapp.com/)
 
 ### 下载APK
-前往 [Releases](https://github.com/yangdi09128036/pinduoduo-uniapp/releases) 下载最新APK安装包（可能会稍慢，取决于你的网络）
+前往 [Releases](https://github.com/yangdi09128036/pinduoduo-uniapp/releases) 下载最新APK安装包（可能会稍慢，取决于你的网络，建议科学上网）
 
 ## 本地运行
 
