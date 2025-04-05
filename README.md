@@ -2,8 +2,6 @@
 
 基于 UniApp 和 UniCloud 开发的仿「拼多多」移动端购物平台，实现了完整的电商购物流程和创新的 AI 对话功能。
 
-![项目预览](https://static-mp-0dcd11a4-5797-4c2e-9b6e-d28808479dcd.next.bspapp.com/static/logo.png)
-
 ## 功能特性
 
 - **用户系统**
