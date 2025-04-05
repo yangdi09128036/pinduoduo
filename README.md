@@ -1,5 +1,7 @@
 仿「拼多多」移动端购物平台 (UniApp + UniCloud)
-
+![Vue2](https://img.shields.io/badge/Vue2%2B-blue)
+![JavaScript](https://img.shields.io/badge/Javascript%2B-green)
+![uniapp](https://img.shields.io/badge/uniapp%2B-red)
 基于 UniApp 和 UniCloud 开发的仿「拼多多」移动端购物平台，实现了完整的电商购物流程和创新的 AI 对话功能。
 
 ## 功能特性
