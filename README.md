@@ -1,8 +1,19 @@
-仿「拼多多」移动端购物平台 (UniApp + UniCloud)
-- ![Vue2](https://img.shields.io/badge/Vue2%2B-blue)
+# 仿「拼多多」移动端购物平台 (UniApp + UniCloud)
+
+![Vue2](https://img.shields.io/badge/Vue2%2B-blue)
 ![JavaScript](https://img.shields.io/badge/Javascript%2B-green)
 ![uniapp](https://img.shields.io/badge/uniapp%2B-red)
-- 基于 UniApp 和 UniCloud 开发的仿「拼多多」移动端购物平台，实现了完整的电商购物流程和创新的 AI 对话功能。
+
+  一个基于 UniApp 和 UniCloud 开发的仿「拼多多」移动端购物平台，实现了完整的电商购物流程和创新的 AI 对话功能。
+
+# B站视频爬取工具 (Python + Requests + MoviePy)
+
+![Python](https://img.shields.io/badge/Python-3.7%2B-blue)
+![Requests](https://img.shields.io/badge/Requests-2.26%2B-green)
+![MoviePy](https://img.shields.io/badge/MoviePy-1.0%2B-red)
+
+一个基于 Python 的 Bilibili 视频下载工具，可以爬取 B 站视频并自动合并音视频流。
+
 
 ## 功能特性
 
