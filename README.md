@@ -62,8 +62,7 @@
 
 #### 克隆仓库
 ```bash
-git clone https://github.com/yangdi09128036/pinduoduo-uniapp.git
-cd pinduoduo-uniapp
+git clone https://github.com/yangdi09128036/pinduoduo-uniapp.git （加上你指定的安装地址，例如G:\pdd-uniapp）
 ```
 
 ### 运行项目
