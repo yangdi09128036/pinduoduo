@@ -60,7 +60,7 @@
 3. 安装过程中保持默认选项（一直下一步）即可
 4. 安装完成后，在任意文件夹右键可以看到 "Git Bash Here" 选项
 
-#### 克隆仓库
+#### 克隆仓库（需要在git bash环境中运行）
 ```bash
 git clone https://github.com/yangdi09128036/pinduoduo-uniapp.git （加上你指定的安装地址，例如G:\pdd-uniapp）
 ```
