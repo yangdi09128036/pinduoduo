@@ -37,13 +37,13 @@
       </view>
 
       <!-- 地图显示区域 -->
-      <view class="section-title">
+      <view class="section-title" v-if="locationInfo">
         <view class="title-line"></view>
         <text>位置信息</text>
         <view class="title-line"></view>
       </view>
       
-      <view class="map-card">
+      <view class="map-card" v-if="locationInfo">
         <image v-if="mapUrl" :src="mapUrl" mode="widthFix" class="map-image"></image>
         <view v-else class="map-placeholder">
           <text class="placeholder-text">地图加载中...</text>
@@ -64,6 +64,11 @@
             <text class="location-value">{{locationInfo.city || '未知'}}</text>
           </view>
         </view>
+      </view>
+
+      <!-- 定位失败提示 -->
+      <view class="location-fail" v-if="!locationInfo">
+        <text>检测到当前连接的网络为IPv6，因技术限制请连接普通IPv4的网络（公网IP地址）</text>
       </view>
 
       <!-- 按钮区域 -->
@@ -188,6 +193,8 @@ export default {
           }
         }
       } catch (error) {
+        console.error('定位失败:', error);
+        this.locationInfo = null; // 定位失败时，将locationInfo设置为null
         uni.showToast({
           title: '定位失败',
           icon: 'none'
@@ -423,6 +430,18 @@ export default {
   font-size: 28rpx;
   color: #333;
   flex: 1;
+}
+
+/* 定位失败提示样式 */
+.location-fail {
+  margin: 30rpx;
+  padding: 20rpx;
+  background: #fff;
+  border-radius: 20rpx;
+  box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.05);
+  text-align: center;
+  font-size: 28rpx;
+  color: #ff5a5f;
 }
 
 /* 按钮样式 */
