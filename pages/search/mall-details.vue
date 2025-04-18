@@ -107,6 +107,22 @@
 						</view>
 						<uni-icons type="right" size="30" color="#999"></uni-icons>
 					</view>
+					
+					<!-- 添加地图显示区域 -->
+					<view class="map-card" v-if="mapUrl">
+						<image :src="mapUrl" mode="widthFix" class="map-image"></image>
+						<view class="location-info">
+							<text class="location-header">
+								<text class="location-title">当前位置:</text>
+							</text>
+							<text class="location-detail" v-if="locationInfo">
+								<text class="location-text">{{ locationInfo.province || '未知' }} {{ locationInfo.city || '未知' }}</text>
+							</text>
+						</view>
+					</view>
+					<view class="map-placeholder" v-else-if="isLoadingMap">
+						<text class="placeholder-text">地图加载中...</text>
+					</view>
 				</view>
 
 				<!-- 商品信息 -->
@@ -170,7 +186,12 @@
 				quantity: 1,
 				isFavorite: false,
 				successMessage: '',
-				errorMessage: ''
+				errorMessage: '',
+				// 添加地图相关数据
+				mapUrl: '',
+				locationInfo: null,
+				isLoadingMap: false,
+				key: '21bbea8854ce73ebd9163d7cf6cc9c76' // 高德地图API key
 			}
 		},
 		async onLoad(options) {
@@ -201,28 +222,30 @@
 		},
 		methods: {
 			async loadGoodsInfo(options) {
-				this.isLoading = true;
-				try {
-					// 优先从路由参数获取商品ID
-					if (options && options.id) {
-						const db = uniCloud.database();
-						const result = await db.collection('mall-goods').doc(options.id).get();
-						if (result.result.data && result.result.data.length > 0) {
-							this.goodsInfo = result.result.data[0];
-						}
-					} else {
-						// 从缓存获取商品信息
-						const goodsInfo = uni.getStorageSync('currentProduct');
-						if (goodsInfo) {
-							this.goodsInfo = goodsInfo;
-						}
-					}
-					console.log("商品详情页数据", this.goodsInfo);
-				} catch (e) {
-					console.error('获取商品信息失败:', e);
-				} finally {
-					this.isLoading = false;
-				}
+			  this.isLoading = true;
+			  try {
+			    // 优先从路由参数获取商品ID
+			    if (options && options.id) {
+			      const db = uniCloud.database();
+			      const result = await db.collection('mall-goods').doc(options.id).get();
+			      if (result.result.data) {
+			        // 确保goodsInfo是单个对象而不是数组
+			        this.goodsInfo = Array.isArray(result.result.data) ? result.result.data[0] : result.result.data;
+			      }
+			    } else {
+			      // 从缓存获取商品信息
+			      const goodsInfo = uni.getStorageSync('currentProduct');
+			      if (goodsInfo) {
+			        this.goodsInfo = goodsInfo;
+			      }
+			    }
+			    console.log("商品详情页数据", this.goodsInfo);
+			    console.log("商品ID", this.goodsInfo?._id);
+			  } catch (e) {
+			    console.error('获取商品信息失败:', e);
+			  } finally {
+			    this.isLoading = false;
+			  }
 			},
 			async checkFavoriteStatus() {
 				if (!store.userInfo || !this.goodsInfo) return;
@@ -343,6 +366,8 @@
 			},
 			showPopup() {
 				this.showBuyPopup = true;
+				// 显示弹窗时加载地图
+				this.getLocationByIP();
 			},
 			hidePopup() {
 				this.showBuyPopup = false;
@@ -438,6 +463,50 @@
 				uni.navigateTo({
 					url:'/pages/user/set'
 				})
+			},
+			// 新增地图相关方法
+			async getLocationByIP() {
+				this.isLoadingMap = true;
+				try {
+					const ipRes = await this.getIPLocation();
+					console.log('定位信息:', ipRes);
+					this.locationInfo = ipRes.data;
+					let originalLng = 0,
+						originalLat = 0;
+					if (ipRes.data.rectangle) {
+						const rectangles = ipRes.data.rectangle.split(';');
+						if (rectangles.length > 0) {
+							const center = rectangles[0].split(',');
+							originalLng = parseFloat(center[0]).toFixed(5);
+							originalLat = parseFloat(center[1]).toFixed(5);
+							let correctedLng = parseFloat(originalLng) + 0.43914;
+							let correctedLat = parseFloat(originalLat) + 0.15293;
+							this.mapUrl =
+								`https://restapi.amap.com/v3/staticmap?location=${correctedLng},${correctedLat}&zoom=14&size=600*300&markers=mid,,A:${correctedLng},${correctedLat}&key=${this.key}`;
+						}
+					}
+				} catch (error) {
+					console.error('定位失败:', error);
+				} finally {
+					this.isLoadingMap = false;
+				}
+			},
+			getIPLocation() {
+				return new Promise((resolve, reject) => {
+					uni.request({
+						url: `https://restapi.amap.com/v3/ip?key=${this.key}`,
+						success: (res) => {
+							if (res.data.status === '1') {
+								resolve(res);
+							} else {
+								reject(new Error(res.data.info || '定位失败'));
+							}
+						},
+						fail: (err) => {
+							reject(err);
+						}
+					});
+				});
 			}
 		}
 	}
@@ -848,7 +917,58 @@
 		font-size: 32rpx;
 		height: 88rpx;
 		line-height: 88rpx;
+	}
+	
+	/* 地图相关样式 */
+	.map-card {
+		margin: 20rpx 0;
+		border-radius: 12rpx;
+		overflow: hidden;
+		background: #fff;
+	}
 
+	.map-image {
+		width: 100%;
+		display: block;
+	}
+
+	.map-placeholder {
+		height: 200rpx;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		background-color: #f0f2f5;
+		margin: 20rpx 0;
+		border-radius: 12rpx;
+	}
+
+	.placeholder-text {
+		color: #999;
+		font-size: 28rpx;
+	}
+
+	.location-info {
+		padding: 10rpx 20rpx;
+		background: rgba(255, 255, 255, 0.9);
+		border-top: 1px solid #f0f2f5;
+	}
+
+	.location-header {
+		padding: 10rpx 0;
+	}
+
+	.location-title {
+		font-size: 28rpx;
+		color: #333;
+		font-weight: 500;
+	}
+
+	.location-detail {
+		padding: 6rpx 0;
+	}
+
+	.location-text {
+		font-size: 26rpx;
+		color: #666;
 	}
 </style>
-

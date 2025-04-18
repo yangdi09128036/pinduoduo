@@ -86,31 +86,32 @@
 				allGoods: [],
 				currentTabData: [],
 				placeholderProducts: [],
-				specialItems: [{
-						image: '/static/clock.png',
-						text: '限时秒杀',
-						url: '/pages/special/clock'
-					},
-					{
-						image: '/static/recharge.png',
-						text: '充值中心',
-						url: '/pages/special/recharge'
-					},
-					{
-						image: '/static/turntable.png',
-						text: '现金大转盘',
-						url: '/pages/special/turntable'
-					},
-					{
-						image: '/static/sale.png',
-						text: '9块9特卖',
-						url: '/pages/special/sale'
-					},
-					{
-						image: '/static/money.png',
-						text: '现金红包',
-						url: '/pages/special/money'
-					}
+				specialItems: [
+				  {
+				    image: '/static/clock.png',
+				    text: '限时秒杀',
+				    url: 'https://www.jd.com/'
+				  },
+				  {
+				    image: '/static/recharge.png',
+				    text: '话费充值',
+				    url: 'https://pro.jd.com/mall/active/4NgfTXqfdYhvRcmET8SMGCrRztHU/index.html?babelChannel=ttt12&innerAnchor=100119111653'
+				  },
+				  {
+				    image: '/static/turntable.png',
+				    text: '数码国补',
+				    url: 'https://pro.jd.com/mall/active/h7bbR7sFxP6thFYwDqxNWjAbh8K/index.html?babelChannel=ttt111'
+				  },
+				  {
+				    image: '/static/sale.png',
+				    text: '秒杀',
+				    url: 'https://pro.jd.com/mall/active/2hZ8idqu6mj9ZGR1LbPsd3MrW2i2/index.html?babelChannel=ttt3&innerAnchor=10136238481040'
+				  },
+				  {
+				    image: '/static/money.png',
+				    text: '便宜包邮',
+				    url: 'https://pro.jd.com/mall/active/3J13cRc4KPMNqXPVuVFY9aDKsBJy/index.html?babelChannel=ttt1'
+				  }
 				],
 				sections: [{
 						title: '百亿补贴',
@@ -345,9 +346,19 @@
 				});
 			},
 			navigateToPage(url) {
-				uni.navigateTo({
-					url
-				});
+			  try {
+			    if (process.env.VUE_APP_PLATFORM === 'h5') {
+			      // 如果是 H5 平台，直接使用 window.location.href
+			      window.location.href = url;
+			    } else {
+			      // 如果是原生平台，使用 uni.navigateTo 或其他方式
+			      uni.navigateTo({
+			        url: `/pages/webview/webview?url=${encodeURIComponent(url)}`
+			      });
+			    }
+			  } catch (error) {
+			    console.error('跳转失败:', error);
+			  }
 			},
 			navigateToSection(index) {
 				const section = this.sections[index];

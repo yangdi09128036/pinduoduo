@@ -612,43 +612,51 @@ export default {
 			}, 5000)
 		},
 		navigateToProductDetails(productId) {
-			if (!productId) {
-				uni.showToast({
-					title: '商品信息不完整',
-					icon: 'none'
-				})
-				return
-				
-			}
-			
-			// 获取商品详情
-			console.log("跳转商品详情页的商品id",productId);
-			const db = uniCloud.database()
-			db.collection('mall-goods').doc(productId).get().then(res => {
-				console.log("跳转商品详情页的商品数据",res.result.data[0]);
-				if (res.result.data) {
-					uni.setStorage({
-						key: 'currentProduct',
-						data: res.result.data[0],
-						success: () => {
-							uni.navigateTo({
-								url: '../search/mall-details'
-							})
-						}
-					})
-				} else {
-					uni.showToast({
-						title: '商品不存在或已下架',
-						icon: 'none'
-					})
-				}
-			}).catch(err => {
-				console.error('获取商品详情失败:', err)
-				uni.showToast({
-					title: '获取商品详情失败',
-					icon: 'none'
-				})
-			})
+		  if (!productId) {
+		    uni.showToast({
+		      title: '商品信息不完整',
+		      icon: 'none'
+		    })
+		    return
+		  }
+		  
+		  // 获取商品详情
+		  console.log("跳转商品详情页的商品id", productId);
+		  
+		  // 处理可能为Proxy(Array)的情况
+		  let idString = productId;
+		  if (typeof productId === 'object' && productId[0]) {
+		    idString = productId[0];
+		  }
+		  
+		  const db = uniCloud.database()
+		  db.collection('mall-goods').doc(idString).get().then(res => {
+		    if (res.result.data) {
+		      console.log("跳转商品详情页的商品数据", res.result.data);
+		      // 确保存储的是单个商品对象而不是数组
+		      const goodsData = Array.isArray(res.result.data) ? res.result.data[0] : res.result.data;
+		      uni.setStorage({
+		        key: 'currentProduct',
+		        data: goodsData,
+		        success: () => {
+		          uni.navigateTo({
+		            url: '../search/mall-details'
+		          })
+		        }
+		      })
+		    } else {
+		      uni.showToast({
+		        title: '商品不存在或已下架',
+		        icon: 'none'
+		      })
+		    }
+		  }).catch(err => {
+		    console.error('获取商品详情失败:', err)
+		    uni.showToast({
+		      title: '获取商品详情失败',
+		      icon: 'none'
+		    })
+		  })
 		}
 	}
 }
