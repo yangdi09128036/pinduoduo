@@ -68,7 +68,7 @@
 
       <!-- 定位失败提示 -->
       <view class="location-fail" v-if="!locationInfo">
-        <text>检测到当前连接的网络为IPv6，因技术限制请连接普通IPv4的网络（公网IP地址）</text>
+        <text>检测到当前连接的网络为IPv6，因定位技术限制请连接IPv4的网络（公网IP地址）来显示当前所处位置的地图（不影响修改和保存您的用户信息）</text>
       </view>
 
       <!-- 按钮区域 -->
@@ -104,13 +104,46 @@ export default {
     this.getLocationByIP();
   },
   methods: {
-    loadUserInfo() {
-      const userInfo = store.userInfo;
-      console.log("之前用户信息", userInfo);
-      if (userInfo) {
-        this.username = userInfo.username || '';
-        this.mobile = userInfo.mobile || '';
-        this.address = userInfo.address || '';
+    async loadUserInfo() {
+      try {
+        // 使用callFunction调用uni-id-cf
+        const res = await uniCloud.callFunction({
+          name: 'uni-id-cf',
+          data: {
+            action: 'getCurrentUserInfo',
+            params: {
+              uid: store.userInfo._id,
+              field: ['username', 'mobile', 'address'] // 只获取需要的字段
+            }
+          }
+        });
+        
+        if (res.result.code === 0) {
+          const userInfo = res.result.userInfo;
+          this.username = userInfo.username || '';
+          this.mobile = userInfo.mobile || '';
+          this.address = userInfo.address || '';
+          
+          // 更新store
+          store.userInfo = {
+            ...store.userInfo,
+            ...userInfo
+          };
+        } else {
+          throw new Error(res.result.message || '获取用户信息失败');
+        }
+      } catch (e) {
+        console.error('获取用户信息失败:', e);
+        // 降级处理：使用store中的缓存
+        const localInfo = store.userInfo || {};
+        this.username = localInfo.username || '';
+        this.mobile = localInfo.mobile || '';
+        this.address = localInfo.address || '';
+        
+        uni.showToast({
+          title: '获取信息失败，使用缓存数据',
+          icon: 'none'
+        });
       }
     },
     async saveUserInfo() {

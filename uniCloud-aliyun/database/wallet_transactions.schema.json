@@ -1,1 +1,54 @@
-{"bsonType":"object","required":["user_id","amount","type","balance"],"permission":{"read":true,"create":true,"update":false,"delete":false},"properties":{"_id":{"bsonType":"objectId","description":"交易记录唯一标识符"},"user_id":{"bsonType":"string","description":"用户唯一标识符"},"amount":{"bsonType":"number","minimum":0.01,"maximum":1000000,"description":"交易金额（正值表示充值，负值表示消费）"},"type":{"bsonType":"string","enum":["credit","debit"],"description":"交易类型（credit 表示充值，debit 表示消费）"},"balance":{"bsonType":"number","description":"交易后的钱包余额","minimum":0,"maximum":1000000},"productImage":{"bsonType":"string","description":"商品图片地址","title":"商品图片","trim":"both","permission":{"read":true,"write":true}},"created_at":{"bsonType":"timestamp","description":"交易创建时间","forceDefaultValue":{"$env":"now"}}}}
+{
+	"bsonType": "object",
+	"required": ["user_id", "amount", "type", "balance"],
+	"permission": {
+		"read": true,
+		"create": true,
+		"update": false,
+		"delete": false
+	},
+	"properties": {
+		"_id": {
+			"bsonType": "objectId",
+			"description": "交易记录唯一标识符"
+		},
+		"user_id": {
+			"bsonType": "string",
+			"description": "用户唯一标识符"
+		},
+		"amount": {
+			"bsonType": "number",
+			"minimum": 0.01,
+			"maximum": 1000000,
+			"description": "交易金额（正值表示充值，负值表示消费）"
+		},
+		"type": {
+			"bsonType": "string",
+			"enum": ["credit", "debit"],
+			"description": "交易类型（credit 表示充值，debit 表示消费）"
+		},
+		"balance": {
+			"bsonType": "number",
+			"description": "交易后的钱包余额",
+			"minimum": 0,
+			"maximum": 1000000
+		},
+		"productImage": {
+			"bsonType": "string",
+			"description": "商品图片地址",
+			"title": "商品图片",
+			"trim": "both",
+			"permission": {
+				"read": true,
+				"write": true
+			}
+		},
+		"created_at": {
+			"bsonType": "timestamp",
+			"description": "交易创建时间",
+			"forceDefaultValue": {
+				"$env": "now"
+			}
+		}
+	}
+}

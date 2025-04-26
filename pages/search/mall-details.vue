@@ -20,40 +20,66 @@
 				</swiper-item>
 			</swiper>
 
+
 			<!-- 价格营销信息 -->
 			<view class="price-marketing">
-				<view class="price-section">
-					<text class="currency">¥</text>
-					<text class="price">{{ goodsInfo.price }}</text>
-					<text class="original-price"
-						v-if="goodsInfo.is_on_sale">¥{{ (goodsInfo.price * 1.2).toFixed(2) }}</text>
+				<view class="price-section-container">
+					<view class="price-section">
+						<text class="currency">¥</text>
+						<text class="price">{{ goodsInfo.price }}</text>
+						<text class="original-price"
+							v-if="goodsInfo.is_on_sale">¥{{ (goodsInfo.price * 1.2).toFixed(2) }}</text>
+					</view>
+					<view class="promotion-tags">
+						<text class="promotion-tag">30天低价</text>
+						<text class="promotion-text">全网低价</text>
+						<text class="promotion-text">全网疯抢30万件</text>
+					</view>
 				</view>
-				<view class="promotion-tags">
-					<text class="promotion-tag">30天低价</text>
-					<text class="promotion-text">全网低价</text>
+				<!-- 新增倒计时区域 -->
+				<view class="countdown-section">
+					<text class="countdown-title">百亿补贴</text>
+					<text class="countdown-time">{{ countdownTime }}</text>
+					<text class="countdown-title">即将恢复原价</text>
 				</view>
 			</view>
-
 			<!-- 商品信息部分 -->
 			<view class="goods-info">
 				<view class="title-section">
 					<text class="brand-tag">品牌</text>
 					<text class="title">{{ goodsInfo.name }}</text>
+					<text class="tags" v-if="goodsInfo.is_hot || goodsInfo.is_new || goodsInfo.is_best">
+						<text class="tag" v-if="goodsInfo.is_hot">热销</text>
+						<text class="tag" v-if="goodsInfo.is_new">新品</text>
+						<text class="tag" v-if="goodsInfo.is_best">精品</text>
+					</text>
 				</view>
 
 				<view class="sales-stats">
 					<text class="stat-item">{{ goodsInfo.total_sell_count || '2068' }}人好评</text>
-					<text class="stat-divider">|</text>
 					<text class="stat-item">24小时内200+人拼单</text>
-					<text class="stat-divider">|</text>
 					<text class="stat-item">3466人收藏</text>
 				</view>
-
-				<view class="tags" v-if="goodsInfo.is_hot || goodsInfo.is_new || goodsInfo.is_best">
-					<text class="tag" v-if="goodsInfo.is_hot">热销</text>
-					<text class="tag" v-if="goodsInfo.is_new">新品</text>
-					<text class="tag" v-if="goodsInfo.is_best">精品</text>
+				<!-- 商品评价 -->
+			<view class="reviews-section">
+				<view class="reviews-header">
+					<text class="reviews-title">商品评价（{{ goodsInfo && goodsInfo.reviews ? goodsInfo.reviews.length : 0 }}）</text>
+					<text v-if="goodsInfo && goodsInfo.reviews && goodsInfo.reviews.length > 0" class="reviews-view-all" @click="goAllReviews">查看全部></text>
+					<text v-else class="reviews-view-all" style="color: #999;">本商品为新品，期待您的购买评价</text>
 				</view>
+				<view v-if="goodsInfo && goodsInfo.reviews && goodsInfo.reviews.length > 0" class="reviews-list">
+					<view class="review-item" v-for="(review, index) in goodsInfo.reviews.slice(0, 2)" :key="index">
+						<view class="review-avatar">
+							<image src="/static/default-avatar.png" class="avatar-image"></image>
+						</view>
+						<view class="review-content">
+							<view class="review-user">匿名用户</view>
+							<view class="review-text">{{ review }}</view>
+						</view>
+					</view>
+				</view>
+			</view>
+
 				<!-- 新增图片显示区域 -->
 				<view class="image-gallery">
 					<view class="image-item" v-for="(item, index) in convertToBannerArray(goodsInfo.goods_banner_imgs)"
@@ -107,7 +133,7 @@
 						</view>
 						<uni-icons type="right" size="30" color="#999"></uni-icons>
 					</view>
-					
+
 					<!-- 添加地图显示区域 -->
 					<view class="map-card" v-if="mapUrl">
 						<image :src="mapUrl" mode="widthFix" class="map-image"></image>
@@ -116,7 +142,8 @@
 								<text class="location-title">当前位置:</text>
 							</text>
 							<text class="location-detail" v-if="locationInfo">
-								<text class="location-text">{{ locationInfo.province || '未知' }} {{ locationInfo.city || '未知' }}</text>
+								<text class="location-text">{{ locationInfo.province || '未知' }}
+									{{ locationInfo.city || '未知' }}</text>
 							</text>
 						</view>
 					</view>
@@ -180,14 +207,19 @@
 	export default {
 		data() {
 			return {
-				goodsInfo: null,
+				goodsInfo: {
+							reviews: [] // 初始化为空数组，避免未定义
+						},
+				countdownTime: '00:00:00',
+				countdownSeconds: 0,
+				countdownInterval: null,
+				countdownEndTime: 0,
 				isLoading: true,
 				showBuyPopup: false,
 				quantity: 1,
 				isFavorite: false,
 				successMessage: '',
 				errorMessage: '',
-				// 添加地图相关数据
 				mapUrl: '',
 				locationInfo: null,
 				isLoadingMap: false,
@@ -195,6 +227,8 @@
 			}
 		},
 		async onLoad(options) {
+			this.isLoading = true;
+			this.initCountdown(); // 初始化倒计时
 			await this.loadGoodsInfo(options);
 			await this.checkFavoriteStatus();
 			console.log('Initial userInfo:', store.userInfo);
@@ -213,6 +247,7 @@
 				});
 				// 隐藏弹窗
 				this.hidePopup();
+
 			}
 		},
 		computed: {
@@ -222,36 +257,112 @@
 		},
 		methods: {
 			async loadGoodsInfo(options) {
-			  this.isLoading = true;
-			  try {
-			    // 优先从路由参数获取商品ID
-			    if (options && options.id) {
-			      const db = uniCloud.database();
-			      const result = await db.collection('mall-goods').doc(options.id).get();
-			      if (result.result.data) {
-			        // 确保goodsInfo是单个对象而不是数组
-			        this.goodsInfo = Array.isArray(result.result.data) ? result.result.data[0] : result.result.data;
-			      }
-			    } else {
-			      // 从缓存获取商品信息
-			      const goodsInfo = uni.getStorageSync('currentProduct');
-			      if (goodsInfo) {
-			        this.goodsInfo = goodsInfo;
-			      }
+			    this.isLoading = true;
+			    try {
+			        let productId = options?.id;
+			        
+			        // 如果没有传入ID，尝试从缓存获取当前商品ID
+			        if (!productId) {
+			            const cachedProduct = uni.getStorageSync('currentProduct');
+			            if (cachedProduct && cachedProduct._id) {
+			                productId = cachedProduct._id;
+			            }
+			        }
+			        
+			        if (productId) {
+			            const db = uniCloud.database();
+			            const result = await db.collection('mall-goods').doc(productId).get();
+			            if (result) {
+			                // 确保goodsInfo是单个对象而不是数组
+			                this.goodsInfo = Array.isArray(result.result.data) ? result.result.data[0] : result.result.data;
+			                console.log('商品数据', this.goodsInfo);
+			                
+			                // 确保reviews字段存在
+			                if (!this.goodsInfo.reviews) {
+			                    this.goodsInfo.reviews = [];
+			                }
+			                
+			                // 更新本地缓存
+			                uni.setStorageSync('currentProduct', this.goodsInfo);
+			            }
+			        } else {
+			            // 如果既没有传入ID，缓存中也没有商品信息，显示错误
+			            console.error('无法获取商品ID');
+			        }
+			    } catch (e) {
+			        console.error('获取商品信息失败:', e);
+			    } finally {
+			        this.isLoading = false;
 			    }
-			    console.log("商品详情页数据", this.goodsInfo);
-			    console.log("商品ID", this.goodsInfo?._id);
-			  } catch (e) {
-			    console.error('获取商品信息失败:', e);
-			  } finally {
-			    this.isLoading = false;
-			  }
+			},
+			// 初始化倒计时
+			initCountdown() {
+				const savedEndTime = uni.getStorageSync('countdownEndTime');
+				const now = Math.floor(Date.now() / 1000);
+
+				if (savedEndTime && savedEndTime > now) {
+					this.countdownEndTime = savedEndTime;
+					this.startCountdown();
+				} else {
+					this.createNewCountdown();
+				}
+			},
+			// 创建新的倒计时
+			createNewCountdown() {
+				const minutes = [5, 10, 15][Math.floor(Math.random() * 3)];
+				this.countdownSeconds = minutes * 60;
+				this.countdownEndTime = Math.floor(Date.now() / 1000) + this.countdownSeconds;
+
+				uni.setStorageSync('countdownEndTime', this.countdownEndTime);
+
+				this.startCountdown();
+			},
+			// 开始倒计时
+			startCountdown() {
+				if (this.countdownInterval) {
+					clearInterval(this.countdownInterval);
+				}
+
+				this.updateCountdownDisplay();
+
+				this.countdownInterval = setInterval(() => {
+					this.updateCountdownDisplay();
+				}, 1000);
+			},
+			// 更新倒计时显示
+			updateCountdownDisplay() {
+				const now = Math.floor(Date.now() / 1000);
+				const remainingTime = this.countdownEndTime - now;
+
+				if (remainingTime <= 0) {
+					this.countdownTime = '00:00:00';
+					clearInterval(this.countdownInterval);
+					this.countdownInterval = null;
+				} else {
+					const hours = Math.floor(remainingTime / 3600);
+					const minutes = Math.floor((remainingTime % 3600) / 60);
+					const seconds = remainingTime % 60;
+
+					this.countdownTime =
+						`${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+				}
+			},
+			goAllReviews() {
+				if (this.goodsInfo.reviews.length > 0) {
+					// 将商品信息存储到本地缓存
+					uni.setStorageSync('currentProductReviews', this.goodsInfo.reviews);
+					uni.navigateTo({
+						url: `/pages/search/AllReviews?id=${this.goodsInfo._id}`
+					});
+				} else {
+					uni.showToast({
+						title: '本商品暂无评价',
+						icon: 'none'
+					});
+				}
 			},
 			async checkFavoriteStatus() {
 				if (!store.userInfo || !this.goodsInfo) return;
-
-				console.log('用户id', store.userInfo._id);
-				console.log('商品id', this.goodsInfo._id);
 
 				const db = uniCloud.database();
 				const favorCollection = db.collection('favor');
@@ -272,7 +383,6 @@
 				const historyCollection = db.collection('history');
 
 				try {
-					// 查询是否已存在该商品的历史记录
 					const queryResult = await historyCollection
 						.where({
 							userId: store.userInfo._id,
@@ -280,7 +390,6 @@
 						}).get();
 
 					if (queryResult.result.data.length === 0) {
-						// 如果不存在，插入新记录
 						await historyCollection.add({
 							userId: store.userInfo._id,
 							productId: this.goodsInfo._id
@@ -389,13 +498,11 @@
 					return;
 				}
 
-				// 准备支付数据
 				const paymentData = {
 					amount: (this.goodsInfo.group_price || this.goodsInfo.price) * this.quantity,
 					username: this.userInfo.username,
 					mobile: this.userInfo.mobile,
-					avatar: this.userInfo.avatar_file.url ||
-						'/static/avatar-default.png',
+					avatar: this.userInfo.avatar_file.url || '/static/avatar-default.png',
 					productId: this.goodsInfo._id,
 					productName: this.goodsInfo.name,
 					productImage: this.goodsInfo.goods_thumb.fileID,
@@ -403,18 +510,16 @@
 					userId: this.userInfo._id
 				};
 				console.log('支付数据', paymentData);
-				
-				// 存储支付数据
+
 				uni.setStorageSync('paymentData', paymentData);
 
-				// 创建初始订单
 				const db = uniCloud.database();
 				const orderCollection = db.collection('order');
 
 				try {
 					const orderResult = await orderCollection.add({
 						userId: this.userInfo._id,
-						productId: [this.goodsInfo._id], // 使用数组格式，与favor页面保持一致
+						productId: [this.goodsInfo._id],
 						productName: this.goodsInfo.name,
 						productImage: this.goodsInfo.goods_thumb.fileID,
 						quantity: this.quantity,
@@ -425,12 +530,9 @@
 						deliveryStatus: 0,
 						reviewStatus: 0
 					});
-					console.log('orderResult', orderResult);
 
 					if (orderResult && orderResult.result && orderResult.result.id) {
-						// 使用数组存储订单ID，与favor页面保持一致
 						uni.setStorageSync('currentOrderIds', [orderResult.result.id]);
-						console.log('orderResult.id', orderResult.result.id);
 						uni.navigateTo({
 							url: '/pages/wallet/pay'
 						});
@@ -457,14 +559,13 @@
 				}
 			},
 			navBack() {
-				uni.navigateBack(); // 返回上一级页面
+				uni.navigateBack();
 			},
-			goSet(){
+			goSet() {
 				uni.navigateTo({
-					url:'/pages/user/set'
-				})
+					url: '/pages/user/set'
+				});
 			},
-			// 新增地图相关方法
 			async getLocationByIP() {
 				this.isLoadingMap = true;
 				try {
@@ -550,13 +651,58 @@
 	/* 价格营销区域样式 */
 	.price-marketing {
 		background: linear-gradient(to right, #ff2020, #ff4040);
-		padding: 20rpx 20rpx;
+		padding: 20rpx;
 		color: #fff;
+		display: flex;
+		align-items: center;
+		/* 垂直居中 */
+		height: 120rpx;
+		/* 设置固定高度 */
+		position: relative;
+	}
+
+	/* 左侧70%区域 */
+	.price-section-container {
+		width: 70%;
+		display: flex;
+		flex-direction: column;
+		justify-content: center;
+		/* 垂直居中 */
+		height: 100%;
+		/* 继承父容器高度 */
 	}
 
 	.price-section {
 		display: flex;
 		align-items: baseline;
+	}
+
+	/* 倒计时区域样式 */
+	.countdown-section {
+		width: 30%;
+		display: flex;
+		flex-direction: column;
+		justify-content: center;
+		/* 垂直居中 */
+		align-items: center;
+		/* 水平居中 */
+		height: 120%;
+		/* 继承父容器高度 */
+		background-color: rgba(0, 0, 0, 0.15);
+		border-radius: 12rpx;
+	}
+
+	.countdown-title {
+		font-size: 28rpx;
+		font-weight: bold;
+		margin-bottom: 8rpx;
+	}
+
+	.countdown-time {
+		font-size: 32rpx;
+		font-weight: bold;
+		color: #fff;
+		letter-spacing: 1rpx;
 	}
 
 	.currency {
@@ -584,38 +730,82 @@
 	.promotion-tag {
 		background-color: #fff1f0;
 		color: #ff2020;
-		padding: 4rpx 16rpx;
+		padding: 4rpx 10rpx;
 		border-radius: 4rpx;
 		font-size: 24rpx;
 		margin-right: 20rpx;
 	}
 
 	.promotion-text {
+		background-color: #ffac1d;
+		color: #ff2020;
+		padding: 4rpx 10rpx;
+		border-radius: 4rpx;
 		font-size: 24rpx;
-		color: rgba(255, 255, 255, 0.9);
+		margin-right: 20rpx;
 	}
 
-	/* 优惠券区域样式 */
-	.coupon-section {
-		background-color: #fff;
-		padding: 20rpx 30rpx;
+	/* 商品评论区域 */
+	.reviews-header {
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
-		margin: 2rpx 0;
+		padding: 15rpx 0;
+		border-bottom: 1rpx solid #a4a4a4;
 	}
 
-	.coupon-tag {
-		color: #ff2020;
-		border: 1px solid #ff2020;
-		padding: 4rpx 16rpx;
-		border-radius: 4rpx;
-		font-size: 24rpx;
+	.reviews-title {
+		font-size: 32rpx;
+		font-weight: bold;
+		color: #333;
 	}
 
-	.arrow {
+	.reviews-view-all {
+		font-size: 28rpx;
+		color: #666;
+		cursor: pointer;
+	}
+
+	.reviews-view-all[style*="color: #999;"] {
 		color: #999;
-		font-size: 24rpx;
+		cursor: default;
+	}
+
+	.reviews-list {
+		margin-top: 30rpx;
+	}
+
+	.review-item {
+		display: flex;
+		margin-bottom: 30rpx;
+	}
+
+	.review-avatar {
+		width: 80rpx;
+		height: 80rpx;
+		border-radius: 40rpx;
+		overflow: hidden;
+		margin-right: 20rpx;
+	}
+
+	.avatar-image {
+		width: 100%;
+		height: 100%;
+	}
+
+	.review-content {
+		flex: 1;
+	}
+
+	.review-user {
+		font-size: 28rpx;
+		color: #666;
+		margin-bottom: 10rpx;
+	}
+
+	.review-text {
+		font-size: 28rpx;
+		color: #333;
 	}
 
 	/* 商品信息区域样式 */
@@ -646,12 +836,15 @@
 	.sales-stats {
 		display: flex;
 		align-items: center;
-		margin: 20rpx 0;
 	}
 
 	.stat-item {
 		color: #666;
 		font-size: 24rpx;
+		padding: 8rpx;
+		margin-right: 20rpx;
+		border: 2rpx solid #000;
+		border-radius: 8rpx;
 	}
 
 	.stat-divider {
@@ -661,10 +854,9 @@
 	}
 
 	.tags {
-		display: flex;
 		flex-wrap: wrap;
 		gap: 10rpx;
-		margin: 20rpx 0;
+		margin: 20rpx 10rpx;
 	}
 
 	.tag {
@@ -673,6 +865,7 @@
 		color: #ff4400;
 		font-size: 24rpx;
 		border-radius: 4rpx;
+		margin-left: 10rpx;
 	}
 
 	.image-gallery {
@@ -918,7 +1111,7 @@
 		height: 88rpx;
 		line-height: 88rpx;
 	}
-	
+
 	/* 地图相关样式 */
 	.map-card {
 		margin: 20rpx 0;

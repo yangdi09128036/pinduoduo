@@ -1,1 +1,40 @@
-{"bsonType":"object","required":["user_id","balance"],"permission":{"read":true,"create":true,"update":true,"delete":false},"properties":{"_id":{"bsonType":"objectId","description":"钱包唯一标识符"},"user_id":{"bsonType":"string","description":"用户唯一标识符"},"balance":{"bsonType":"number","description":"钱包余额（单位：元）","minimum":0,"maximum":1000000},"created_at":{"bsonType":"timestamp","description":"钱包创建时间","forceDefaultValue":{"$env":"now"}},"updated_at":{"bsonType":"timestamp","description":"钱包最后更新时间","forceDefaultValue":{"$env":"now"}}}}
+{
+	"bsonType": "object",
+	"required": ["user_id", "balance"],
+	"permission": {
+		"read": true,
+		"create": true,
+		"update": true,
+		"delete": false
+	},
+	"properties": {
+		"_id": {
+			"bsonType": "objectId",
+			"description": "钱包唯一标识符"
+		},
+		"user_id": {
+			"bsonType": "string",
+			"description": "用户唯一标识符"
+		},
+		"balance": {
+			"bsonType": "number",
+			"description": "钱包余额（单位：元）",
+			"minimum": 0,
+			"maximum": 1000000
+		},
+		"created_at": {
+			"bsonType": "timestamp",
+			"description": "钱包创建时间",
+			"forceDefaultValue": {
+				"$env": "now"
+			}
+		},
+		"updated_at": {
+			"bsonType": "timestamp",
+			"description": "钱包最后更新时间",
+			"forceDefaultValue": {
+				"$env": "now"
+			}
+		}
+	}
+}

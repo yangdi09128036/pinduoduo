@@ -205,6 +205,37 @@
 		"navigationBarTitleText" : ""
 	}
 }
+,{
+    "path": "pages/mall-goods/add",
+    "style": {
+        "navigationBarTitleText": "新增"
+    }
+}
+,{
+    "path": "pages/mall-goods/edit",
+    "style": {
+        "navigationBarTitleText": "编辑"
+    }
+}
+,{
+    "path": "pages/mall-goods/list",
+    "style": {
+        "navigationBarTitleText": "列表"
+    }
+}
+,{
+    "path": "pages/mall-goods/detail",
+    "style": {
+        "navigationBarTitleText": "详情"
+    }
+},
+{
+	"path" : "pages/search/AllReviews",
+	"style" : 
+	{
+		"navigationBarTitleText" : ""
+	}
+}
 ],
   "tabBar": {
     "color": "#7A7E83",

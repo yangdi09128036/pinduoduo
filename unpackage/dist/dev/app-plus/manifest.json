@@ -7,7 +7,7 @@
   "id": "__UNI__1D20EA0",
   "name": "pdd",
   "version": {
-    "name": "1.0.0",
+    "name": "1.1.0",
     "code": "100"
   },
   "description": "一款基于uniapp与unicloud打造的移动端购物平台（版权归梁云烽所有）",
@@ -19,6 +19,7 @@
   "permissions": {
     "Camera": {},
     "OAuth": {},
+    "Geolocation": {},
     "UniNView": {
       "description": "UniNView原生渲染"
     }
@@ -110,6 +111,14 @@
           "weixin": {
             "appid": "wx2489521bfcd40296",
             "UniversalLinks": ""
+          }
+        },
+        "geolocation": {
+          "system": {
+            "__platform__": [
+              "ios",
+              "android"
+            ]
           }
         },
         "audio": {

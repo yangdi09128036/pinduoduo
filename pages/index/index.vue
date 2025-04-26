@@ -157,63 +157,64 @@
 		methods: {
 			// 新增：同步检查用户信息的方法
 			async checkUserInfoSync() {
-				console.log('开始同步检查用户信息');
-				
-				// 如果用户未登录，不进行检查
-				if (!store.hasLogin) {
-					console.log('用户未登录，跳过信息检查');
-					this.userInfoChecked = true;
-					return;
-				}
-				
-				// 等待用户信息加载完成
-				let attempts = 0;
-				const maxAttempts = 10; // 最多尝试10次
-				
-				while (!store.userInfo && attempts < maxAttempts) {
-					console.log(`等待用户信息加载，尝试 ${attempts + 1}/${maxAttempts}`);
-					await new Promise(resolve => setTimeout(resolve, 300)); // 等待300ms
-					attempts++;
-				}
-				
-				// 检查用户信息
-				this.userInfoChecked = true;
-				
-				if (!store.userInfo) {
-					console.log('用户信息加载超时或不存在');
-					this.userInfoComplete = false;
-					return;
-				}
-				
-				console.log('检查用户信息:', store.userInfo);
-				
-				const hasMobile = !!store.userInfo.mobile && store.userInfo.mobile.trim() !== '';
-				const hasAddress = !!store.userInfo.address && store.userInfo.address.trim() !== '';
-				
-				console.log('用户信息检查结果:', {
-					hasMobile,
-					hasAddress
-				});
-				
-				this.userInfoComplete = hasMobile && hasAddress;
-				
-				if (!this.userInfoComplete) {
-					console.log('用户信息不完整，需要补充');
-					uni.showToast({
-						title: '请完善手机与收货地址',
-						icon: 'none',
-						duration: 2000
-					});
-					
-					// 2秒后自动跳转到用户信息设置页面
-					setTimeout(() => {
-						uni.navigateTo({
-							url: '/pages/user/set'
-						});
-					}, 2000);
-				} else {
-					console.log('用户信息已完整');
-				}
+			  console.log('开始同步检查用户信息');
+			  
+			  // 如果用户未登录，不进行检查
+			  if (!store.hasLogin) {
+			    console.log('用户未登录，跳过信息检查');
+			    this.userInfoChecked = true;
+			    return;
+			  }
+			  
+			  // 等待用户信息加载完成
+			  let attempts = 0;
+			  const maxAttempts = 20; // 将最大尝试次数从10次增加到20次
+			  const waitTime = 2000; // 将每次等待时间从300ms增加到500ms
+			  
+			  while (!store.userInfo && attempts < maxAttempts) {
+			    console.log(`等待用户信息加载，尝试 ${attempts + 1}/${maxAttempts}`);
+			    await new Promise(resolve => setTimeout(resolve, waitTime)); // 等待500ms
+			    attempts++;
+			  }
+			  
+			  // 检查用户信息
+			  this.userInfoChecked = true;
+			  
+			  if (!store.userInfo) {
+			    console.log('用户信息加载超时或不存在');
+			    this.userInfoComplete = false;
+			    return;
+			  }
+			  
+			  console.log('检查用户信息:', store.userInfo);
+			  
+			  const hasMobile = !!store.userInfo.mobile && store.userInfo.mobile.trim() !== '';
+			  const hasAddress = !!store.userInfo.address && store.userInfo.address.trim() !== '';
+			  
+			  console.log('用户信息检查结果:', {
+			    hasMobile,
+			    hasAddress
+			  });
+			  
+			  this.userInfoComplete = hasMobile && hasAddress;
+			  
+			  if (!this.userInfoComplete) {
+			    console.log('用户信息不完整，需要补充');
+			    uni.showToast({
+			      title: '请完善手机与收货地址',
+			      icon: 'none',
+			      duration: 2000
+			    });
+			    
+			    // 2秒后自动跳转到用户信息设置页面
+			    setTimeout(() => {
+			      uni.navigateTo({
+			        url: '/pages/user/set'
+			      });
+			    }, 2000);
+			  } else {
+			    console.log('用户信息已完整');
+			  }
 			},
 			
 			// 保留原有方法，但主要用于onShow时的检查

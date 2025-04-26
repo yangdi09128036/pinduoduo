@@ -664,7 +664,7 @@
   opacity: 0.3;
 }
 .uni-list-item--hover[data-v-c7524739] {
-  background-color: #f1f1f1;
+  background-color: #f1f1f1 !important;
 }
 .uni-list-item__container[data-v-c7524739] {
   position: relative;

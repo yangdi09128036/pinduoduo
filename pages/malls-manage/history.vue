@@ -1,6 +1,8 @@
 <template>
 	<view class="container">
 		<!-- 顶部导航栏 -->
+		<view class="status-bar"></view>
+	
 		<view class="nav-bar">
 			<view class="nav-left" @click="navBack">
 				<image src="/static/left.png" class="back-icon"></image>
@@ -14,13 +16,13 @@
 		</view>
 
 		<!-- 历史商品列表 -->
-		<scroll-view scroll-y="true" class="history-list" @scrolltolower="loadMoreItems">
+		<scroll-view scroll-y="true" class="favor-list" @scrolltolower="loadMoreItems">
 			<view v-if="historyItems.length === 0" class="empty-state">
 				<image src="/static/empty-box.png" class="empty-icon"></image>
 				<text>暂无历史商品</text>
 				<button class="go-shopping-btn" @click="goShopping">去逛逛</button>
 			</view>
-			<view v-else class="history-item" v-for="item in historyItems" :key="item._id">
+			<view v-else class="favor-item" v-for="item in historyItems" :key="item._id">
 				<view class="checkbox" @click="toggleSelect(item)">
 					<view class="checkbox-inner" :class="{ 'selected': selectedItems.includes(item._id) }">
 						<text v-if="selectedItems.includes(item._id)" class="checkbox-icon">✓</text>
@@ -43,7 +45,7 @@
 					</view>
 				</view>
 				<view class="remove-btn" @click="removehistoryItem(item._id)">
-					<uni-icons type="trash" size="20" color="#999"></uni-icons>
+					<uni-icons type="trash" size="30" color="#999"></uni-icons>
 				</view>
 			</view>
 			<view v-if="isLoading" class="loading">
@@ -179,6 +181,7 @@
 
 				const selectedProducts = this.historyItems.filter(item => this.selectedItems.includes(item._id))
 				const totalAmount = parseFloat(this.totalPrice)
+				console.log("商品总价",totalAmount);
 
 				const paymentData = {
 					amount: totalAmount,
@@ -280,46 +283,56 @@
 <style>
 	.container {
 		min-height: 100vh;
-		background-color: #f7f7f7;
+		background-color: #fff;
 		padding-bottom: 120rpx;
 	}
-
+	/* 新增状态栏样式 */
+	.status-bar {
+		height: 50rpx;
+		width: 100%;
+		background: #fff;
+	}
+	
+	/* 修改导航栏样式 */
 	.nav-bar {
-		position: fixed;
-		top: 0;
+		position: sticky; /* 改为 sticky 定位 */
+		top: var(--status-bar-height); /* 固定在状态栏下方 */
 		left: 0;
 		right: 0;
-		height: 88rpx;
-		background-color: #fff;
+		height: 100rpx;
+		background: #fff;
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
 		padding: 0 30rpx;
 		z-index: 100;
-		margin-top: var(--status-bar-height);
+		/* 移除原来的 margin-top */
+	}
+	
+	/* 修改内容区域样式 */
+	.favor-list {
+		margin-top: 0; /* 移除原来的 margin-top */
+		padding: 20rpx;
+		height: calc(100vh - var(--status-bar-height) - 88rpx - 100rpx); /* 调整高度计算 */
 	}
 
 	.nav-left,
 	.nav-right {
-		font-size: 28rpx;
-		color: #333;
+		font-size: 32rpx;
+		color: #000;
 	}
 
 	.nav-title {
 		font-size: 32rpx;
 		font-weight: bold;
+		color: #000;
 	}
 
 	.back-icon {
-		width: 40rpx;
-		height: 40rpx;
+		width: 50rpx;
+		height: 50rpx;
 	}
 
-	.history-list {
-		margin-top: calc(88rpx + var(--status-bar-height));
-		padding: 20rpx;
-		height: calc(100vh - 88rpx - var(--status-bar-height) - 100rpx);
-	}
 
 	.empty-state {
 		display: flex;
@@ -341,13 +354,13 @@
 		color: #fff;
 		border: none;
 		padding: 20rpx 40rpx;
-		border-radius: 40rpx;
+		border-radius: 10rpx;
 	}
 
-	.history-item {
+	.favor-item {
 		display: flex;
 		align-items: center;
-		background-color: #fff;
+		background-color: #f2f7ff;
 		padding: 20rpx;
 		margin-bottom: 20rpx;
 		border-radius: 12rpx;
@@ -362,7 +375,7 @@
 	.checkbox-inner {
 		width: 100%;
 		height: 100%;
-		border: 2rpx solid #ddd;
+		border: 3rpx solid #ddd;
 		border-radius: 50%;
 		display: flex;
 		align-items: center;
@@ -438,7 +451,7 @@
 	}
 
 	.remove-btn {
-		padding: 10rpx;
+		padding: 30rpx;
 	}
 
 	.bottom-bar {
@@ -478,7 +491,7 @@
 		padding: 0 60rpx;
 		height: 72rpx;
 		line-height: 72rpx;
-		border-radius: 36rpx;
+		border-radius: 10rpx;
 		margin: 0;
 	}
 
@@ -492,4 +505,3 @@
 		padding: 20rpx 0;
 	}
 </style>
-

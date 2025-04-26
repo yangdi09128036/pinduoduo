@@ -123,6 +123,11 @@
 							title: '余额不足',
 							icon: 'none'
 						});
+						setTimeout(function() {
+						    uni.navigateTo({
+						        url: '/pages/wallet/wallet'
+						    });
+						}, 1500);
 						return;
 					}
 
@@ -185,9 +190,10 @@
 					uni.removeStorageSync('paymentData');
 					uni.removeStorageSync('currentOrderIds');
 
-					// 延迟返回上一页
-					setTimeout(() => {
-						uni.navigateBack();
+					setTimeout(function() {
+					    uni.navigateTo({
+					        url: '/pages/user/order'
+					    });
 					}, 1500);
 
 				} catch (error) {
@@ -196,6 +202,11 @@
 						title: error.message || '支付失败，请重试',
 						icon: 'none'
 					});
+					setTimeout(function() {
+					    uni.navigateTo({
+					        url: '/pages/wallet/wallet'
+					    });
+					}, 1500);
 				}
 			},
 			async handleCancel() {

@@ -318,7 +318,7 @@
 	}
 
 	.status-bar {
-		height: 20rpx;
+		height: 60rpx;
 		background-color: #ffffff;
 	}
 

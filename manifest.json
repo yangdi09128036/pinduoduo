@@ -2,7 +2,7 @@
     "name" : "pdd",
     "appid" : "__UNI__1D20EA0",
     "description" : "一款基于uniapp与unicloud打造的移动端购物平台（版权归梁云烽所有）",
-    "versionName" : "1.0.0",
+    "versionName" : "1.1.0",
     "versionCode" : "100",
     "transformPx" : false,
     /* 5+App特有相关 */
@@ -19,7 +19,8 @@
         /* 模块配置 */
         "modules" : {
             "Camera" : {},
-            "OAuth" : {}
+            "OAuth" : {},
+            "Geolocation" : {}
         },
         /* 应用发布信息 */
         "distribute" : {
@@ -54,6 +55,11 @@
                     "weixin" : {
                         "appid" : "wx2489521bfcd40296",
                         "UniversalLinks" : ""
+                    }
+                },
+                "geolocation" : {
+                    "system" : {
+                        "__platform__" : [ "ios", "android" ]
                     }
                 }
             },

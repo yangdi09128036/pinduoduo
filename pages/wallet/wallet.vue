@@ -177,49 +177,44 @@
 				}
 			},
 			async createWallet() {
-				try {
-					// 再次检查钱包是否存在，避免重复创建
-					const db = uniCloud.database();
-					const checkResult = await db.collection('wallet')
-						.where({
-							user_id: this.userInfo._id
-						})
-						.get();
-
-					// 如果已经存在钱包，直接使用
-					if (checkResult && checkResult.result && checkResult.result.data && checkResult.result.data
-						.length > 0) {
-						this.walletInfo = checkResult.result.data[0];
-						console.log('找到已存在的钱包', this.walletInfo);
-						return;
-					}
-
-					// 创建新钱包
-					const result = await db.collection('wallet').add({
-						user_id: this.userInfo._id,
-						balance: 0
-					});
-
-					console.log('创建钱包结果', result);
-
-					// 确保我们有一个有效的 _id
-					if (result && result.result && result.result.id) {
-						this.walletInfo = {
-							_id: result.result.id,
-							user_id: this.userInfo._id,
-							balance: 0
-						};
-						console.log('新钱包信息', this.walletInfo);
-					} else {
-						throw new Error('创建钱包失败，未返回有效ID');
-					}
-				} catch (error) {
-					console.error('创建钱包失败:', error);
-					uni.showToast({
-						title: '创建钱包失败',
-						icon: 'none'
-					});
-				}
+			    try {
+			        const db = uniCloud.database();
+			        const checkResult = await db.collection('wallet')
+			            .where({
+			                user_id: this.userInfo._id
+			            })
+			            .get();
+			
+			        if (checkResult && checkResult.result && checkResult.result.data && checkResult.result.data.length > 0) {
+			            this.walletInfo = checkResult.result.data[0];
+			            console.log('找到已存在的钱包', this.walletInfo);
+			            return;
+			        }
+			
+			        const result = await db.collection('wallet').add({
+			            user_id: this.userInfo._id,
+			            balance: 0 // 确保余额初始化为0
+			        });
+			
+			        if (result && result.result && result.result.id) {
+			            this.walletInfo = {
+			                _id: result.result.id,
+			                user_id: this.userInfo._id,
+			                balance: 0 // 确保余额初始化为0
+			            };
+			            console.log('新钱包信息', this.walletInfo);
+			            // 立即加载钱包信息，确保数据同步
+			            await this.loadWalletInfo();
+			        } else {
+			            throw new Error('创建钱包失败，未返回有效ID');
+			        }
+			    } catch (error) {
+			        console.error('创建钱包失败:', error);
+			        uni.showToast({
+			            title: '创建钱包失败',
+			            icon: 'none'
+			        });
+			    }
 			},
 			async loadTransactions() {
 				try {
@@ -249,95 +244,76 @@
 				}
 			},
 			async handleRecharge() {
-				try {
-					// 确保钱包信息已加载
-					if (!this.walletInfo._id) {
-						console.log('钱包信息不完整，重新加载');
-						await this.loadWalletInfo();
-
-						if (!this.walletInfo._id) {
-							uni.showToast({
-								title: '钱包信息加载失败，请重试',
-								icon: 'none'
-							});
-							return;
-						}
-					}
-
-					const amount = parseFloat(this.rechargeAmount);
-					if (isNaN(amount) || amount <= 0) {
-						uni.showToast({
-							title: '请输入有效金额',
-							icon: 'none'
-						});
-						return;
-					}
-
-					// 确保 this.walletInfo.balance 是数字类型
-					const currentBalance = typeof this.walletInfo.balance === 'number' ?
-						this.walletInfo.balance : 0;
-
-					if (typeof currentBalance !== 'number') {
-						console.error('钱包余额数据类型不正确');
-						uni.showToast({
-							title: '充值失败，请重试',
-							icon: 'none'
-						});
-						return;
-					}
-
-					const db = uniCloud.database();
-					console.log("充值前的余额", currentBalance);
-					const newBalance = currentBalance + amount;
-					console.log("充值后的余额", newBalance);
-
-					// 更新钱包余额
-					const updateResult = await db.collection('wallet').doc(this.walletInfo._id).update({
-						balance: newBalance,
-						updated_at: Date.now()
-					});
-
-					console.log("更新结果", updateResult);
-
-					// 检查更新是否成功
-					if (!updateResult || !updateResult.result || !updateResult.result.updated) {
-						console.error('更新钱包余额失败', updateResult);
-						uni.showToast({
-							title: '充值失败，请重试',
-							icon: 'none'
-						});
-						return;
-					}
-
-					// 添加交易记录 - 充值类型不需要productImage
-					const transactionResult = await db.collection('wallet_transactions').add({
-						user_id: this.userInfo._id,
-						amount: amount,
-						type: 'credit',
-						balance: newBalance
-					});
-
-					console.log("交易记录创建结果", transactionResult);
-
-					// 更新本地数据
-					this.walletInfo.balance = newBalance;
-
-					// 重新加载交易记录
-					await this.loadTransactions();
-
-					uni.showToast({
-						title: '充值成功',
-						icon: 'success'
-					});
-
-					this.hideRechargePopup();
-				} catch (error) {
-					console.error('充值失败:', error);
-					uni.showToast({
-						title: '充值失败，请重试',
-						icon: 'none'
-					});
-				}
+			    try {
+			        if (!this.walletInfo._id) {
+			            console.log('钱包信息不完整，重新加载');
+			            await this.loadWalletInfo();
+			
+			            if (!this.walletInfo._id) {
+			                uni.showToast({
+			                    title: '钱包信息加载失败，请重试',
+			                    icon: 'none'
+			                });
+			                return;
+			            }
+			        }
+			
+			        const amount = parseFloat(this.rechargeAmount);
+			        if (isNaN(amount) || amount <= 0) {
+			            uni.showToast({
+			                title: '请输入有效金额',
+			                icon: 'none'
+			            });
+			            return;
+			        }
+			
+			        const currentBalance = typeof this.walletInfo.balance === 'number' ? this.walletInfo.balance : 0;
+			
+			        const newBalance = currentBalance + amount;
+			
+			        const db = uniCloud.database();
+			        const updateResult = await db.collection('wallet').doc(this.walletInfo._id).update({
+			            balance: newBalance,
+			            updated_at: Date.now()
+			        });
+			
+			        if (!updateResult || !updateResult.result || !updateResult.result.updated) {
+			            console.error('更新钱包余额失败', updateResult);
+			            uni.showToast({
+			                title: '充值失败，请重试',
+			                icon: 'none'
+			            });
+			            return;
+			        }
+			
+			        const transactionResult = await db.collection('wallet_transactions').add({
+			            user_id: this.userInfo._id,
+			            amount: amount,
+			            type: 'credit',
+			            balance: newBalance
+			        });
+			
+			        console.log("交易记录创建结果", transactionResult);
+			
+			        // 更新本地数据
+			        this.walletInfo.balance = newBalance;
+			
+			        // 重新加载交易记录
+			        await this.loadTransactions();
+			
+			        uni.showToast({
+			            title: '充值成功',
+			            icon: 'success'
+			        });
+			
+			        this.hideRechargePopup();
+			    } catch (error) {
+			        console.error('充值失败:', error);
+			        uni.showToast({
+			            title: '充值失败，请重试',
+			            icon: 'none'
+			        });
+			    }
 			},
 			formatBalance(balance) {
 				// 确保 balance 是数字
@@ -386,7 +362,7 @@
 	}
 
 	.nav-bar {
-		background: linear-gradient(to right, #2196f3, #1976d2);
+		background: #ff5762;
 		padding: 40px 20px 20px;
 		display: flex;
 		justify-content: space-between;
@@ -480,7 +456,7 @@
 	}
 
 	.recharge {
-		background: #2196f3;
+		background: #ff5762;
 		color: #fff;
 		border: none;
 	}
@@ -504,7 +480,7 @@
 	}
 
 	.promo-link {
-		color: #2196f3;
+		color: #ff5762;
 		font-size: 14px;
 	}
 
