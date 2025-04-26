@@ -10,10 +10,10 @@
 
     <form @submit="saveUserInfo">
       <view class="form-card">
-        <view class="form-item avatar-item">
+        <view class="form-item avatar_file-item">
           <text class="label">头像</text>
-          <view class="avatar-wrapper">
-            <uni-id-pages-avatar width="120rpx" height="120rpx"></uni-id-pages-avatar>
+          <view class="avatar_file-wrapper">
+            <img :src="avatar_file.url" alt="" />
           </view>
         </view>
         <view class="divider"></view>
@@ -91,6 +91,7 @@ import {
 export default {
   data() {
     return {
+		avatar_file:'',
       username: '',
       mobile: '',
       address: '',
@@ -113,16 +114,18 @@ export default {
             action: 'getCurrentUserInfo',
             params: {
               uid: store.userInfo._id,
-              field: ['username', 'mobile', 'address'] // 只获取需要的字段
+              field: ['username', 'mobile', 'address','avatar_file'] // 只获取需要的字段
             }
           }
         });
         
         if (res.result.code === 0) {
           const userInfo = res.result.userInfo;
+		  console.log('用户信息',userInfo);
           this.username = userInfo.username || '';
           this.mobile = userInfo.mobile || '';
           this.address = userInfo.address || '';
+		  this.avatar_file = userInfo.avatar_file || '';
           
           // 更新store
           store.userInfo = {
@@ -139,6 +142,7 @@ export default {
         this.username = localInfo.username || '';
         this.mobile = localInfo.mobile || '';
         this.address = localInfo.address || '';
+		this.avatar_file = localInfo.avatar_file || '';
         
         uni.showToast({
           title: '获取信息失败，使用缓存数据',
@@ -167,7 +171,8 @@ export default {
           ...store.userInfo,
           username: this.username,
           mobile: this.mobile,
-          address: this.address
+          address: this.address,
+		  avatar_file:this.avatar_file
         };
         console.log("之后用户信息", store.userInfo);
         uni.showToast({
@@ -270,7 +275,7 @@ export default {
   position: relative;
   display: flex;
   align-items: center;
-  padding-top: 40rpx;
+  padding-top: 90rpx;
   background: linear-gradient(135deg, #4a89dc, #5d9cec);
   color: #fff;
   box-shadow: 0 4rpx 12rpx rgba(74, 137, 220, 0.3);
@@ -286,13 +291,13 @@ export default {
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: rgba(255, 255, 255, 0.2);
-  border-radius: 50%;
+  
+  
 }
 
 .back-icon {
-  width: 40rpx;
-  height: 40rpx;
+  width: 50rpx;
+  height: 50rpx;
 }
 
 .page-title {
@@ -319,7 +324,7 @@ export default {
   position: relative;
 }
 
-.avatar-item {
+.avatar_file-item {
   padding: 40rpx 0;
 }
 
@@ -342,17 +347,19 @@ export default {
   font-weight: 500;
 }
 
-.avatar-wrapper {
+.avatar_file-wrapper {
   flex: 1;
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
+  justify-content: flex-end;
 }
 
-.avatar-hint {
-  font-size: 24rpx;
-  color: #999;
-  margin-top: 10rpx;
+.avatar_file-wrapper img {
+  width: 120rpx;
+  height: 120rpx;
+  border-radius: 50%;
+  border: 4rpx solid #fff;
+  box-shadow: 0 4rpx 15rpx rgba(0, 0, 0, 0.1);
+  object-fit: cover;
 }
 
 .input {
@@ -365,6 +372,7 @@ export default {
 
 .textarea {
   flex: 1;
+  text-align: right;
   width: 100%;
   height: 50rpx;
   font-size: 30rpx;
@@ -470,7 +478,7 @@ export default {
   margin: 30rpx;
   padding: 20rpx;
   background: #fff;
-  border-radius: 20rpx;
+  border-radius: 10rpx;
   box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.05);
   text-align: center;
   font-size: 28rpx;
@@ -485,7 +493,7 @@ export default {
   font-size: 32rpx;
   height: 90rpx;
   line-height: 90rpx;
-  border-radius: 45rpx;
+  border-radius: 10rpx;
   box-shadow: 0 6rpx 20rpx rgba(74, 137, 220, 0.3);
   transition: all 0.2s;
   position: relative;
@@ -509,7 +517,7 @@ export default {
   color: #ff5a5f;
   font-size: 32rpx;
   padding: 30rpx;
-  border-radius: 16rpx;
+  border-radius: 10rpx;
   background: #fff;
   box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.05);
   transition: all 0.2s;

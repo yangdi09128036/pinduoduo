@@ -163,8 +163,8 @@
 			this.getGoods();
 		},
 		onShow() {
-			// 每次页面显示时获取最新的订单数量
-			this.getOrderCounts();
+		  // 强制从服务器获取最新订单数量，忽略本地缓存
+		  this.fetchOrderCounts();
 		},
 		methods: {
 			async getGoods() {
@@ -184,77 +184,43 @@
 				const shuffledGoods = [...this.allGoods].sort(() => Math.random() - 0.5);
 				return shuffledGoods.slice(0, count);
 			},
-			getOrderCounts() {
-				// 从本地存储获取订单数量
-				const counts = uni.getStorageSync('orderCounts');
-				if (counts) {
-					this.orderCounts = counts;
-				} else {
-					// 如果本地没有存储，则从数据库获取
-					this.fetchOrderCounts();
-				}
-			},
 			async fetchOrderCounts() {
-				if (!store.userInfo || !store.userInfo._id) return;
-				
-				try {
-					const db = uniCloud.database();
-					
-					// 待付款
-					const pendingPaymentResult = await db.collection('order')
-						.where({
-							userId: store.userInfo._id,
-							paymentStatus: 0
-						})
-						.count();
-					this.orderCounts[1] = pendingPaymentResult.result.total;
-					
-					// 待分享
-					const pendingShareResult = await db.collection('order')
-						.where({
-							userId: store.userInfo._id,
-							paymentStatus: 1,
-							shareStatus: 0
-						})
-						.count();
-					this.orderCounts[2] = pendingShareResult.result.total;
-					
-					// 待发货
-					const pendingShippingResult = await db.collection('order')
-						.where({
-							userId: store.userInfo._id,
-							paymentStatus: 1,
-							shippingStatus: 0
-						})
-						.count();
-					this.orderCounts[3] = pendingShippingResult.result.total;
-					
-					// 待收货
-					const pendingReceivingResult = await db.collection('order')
-						.where({
-							userId: store.userInfo._id,
-							shippingStatus: 1,
-							deliveryStatus: 0
-						})
-						.count();
-					this.orderCounts[4] = pendingReceivingResult.result.total;
-					
-					// 待评价
-					const pendingReviewResult = await db.collection('order')
-						.where({
-							userId: store.userInfo._id,
-							deliveryStatus: 1,
-							review: db.command.exists(false)
-						})
-						.count();
-					this.orderCounts[5] = pendingReviewResult.result.total;
-					
-					// 保存到本地存储
-					uni.setStorageSync('orderCounts', this.orderCounts);
-					
-				} catch (error) {
-					console.error('获取订单数量失败:', error);
-				}
+			  if (!store.userInfo || !store.userInfo._id) return;
+			  
+			  try {
+			    const db = uniCloud.database();
+			    
+			    // 使用 Promise.all 并行获取所有订单状态数量，提高效率
+			    const [
+			      pendingPaymentResult,
+			      pendingShareResult,
+			      pendingShippingResult,
+			      pendingReceivingResult,
+			      pendingReviewResult
+			    ] = await Promise.all([
+			      db.collection('order').where({ userId: store.userInfo._id, paymentStatus: 0 }).count(),
+			      db.collection('order').where({ userId: store.userInfo._id, paymentStatus: 1, shareStatus: 0 }).count(),
+			      db.collection('order').where({ userId: store.userInfo._id, paymentStatus: 1, shippingStatus: 0 }).count(),
+			      db.collection('order').where({ userId: store.userInfo._id, shippingStatus: 1, deliveryStatus: 0 }).count(),
+			      db.collection('order').where({ 
+			        userId: store.userInfo._id, 
+			        deliveryStatus: 1, 
+			        review: db.command.exists(false) 
+			      }).count()
+			    ]);
+			    
+			    // 直接更新数据，不经过本地缓存
+			    this.orderCounts = {
+			      1: pendingPaymentResult.result.total,
+			      2: pendingShareResult.result.total,
+			      3: pendingShippingResult.result.total,
+			      4: pendingReceivingResult.result.total,
+			      5: pendingReviewResult.result.total
+			    };
+			    
+			  } catch (error) {
+			    console.error('获取订单数量失败:', error);
+			  }
 			},
 			navigateToProduct(item) {
 				if (!item) return;
@@ -420,7 +386,7 @@
 
 	.orders-section {
 		background-color: #ffffff;
-		margin-top: 20rpx;
+		margin-top: 10rpx;
 		padding: 20rpx;
 	}
 
@@ -486,7 +452,7 @@
 		justify-content: space-around;
 		background-color: #ffffff;
 		padding: 30rpx 0;
-		margin-top: 20rpx;
+		margin-top: 10rpx;
 	}
 
 	.feature-item {
