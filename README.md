@@ -68,7 +68,10 @@ git clone https://github.com/yangdi09128036/pinduoduo-uniapp.git （加上你指
 ### 运行项目
 1. 下载安装 [HBuilderX](https://www.dcloud.io/hbuilderx.html)
 2. 使用HBuilderX打开项目
-3. 选择运行到浏览器或手机模拟器
+3. 创建自己的unicloud云空间
+4. 右键uniCloud，关联自己的云空间
+5. 右键uniCloud下的cloudfunctions和database，全部上传到云空间
+6. 选择运行到浏览器或手机模拟器
 
 ## 项目结构
 
