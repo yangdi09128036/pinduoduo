@@ -111,12 +111,12 @@
 			</view>
 		</view>
 
-		<!-- 商品列表 -->
+		<!-- 修改后的商品列表，与第一个页面完全一致 -->
 		<view class="content">
 			<view class="tab-content">
-				<view v-for="(item, index) in randomGoods" :key="index" class="content-item">
-					<view class="product-card" @click="navigateToProduct(item)">
-						<image class="item-image" :src="item.goods_thumb?.fileID" mode="aspectFill" />
+				<view v-for="(item, index) in randomGoods" :key="index" class="content-item" @click="navigateToProduct(item)">
+					<view class="product-card">
+						<image class="item-image" :src="item.goods_thumb?.fileID" mode="aspectFit" :lazy-load="true" />
 						<view class="product-info">
 							<text class="item-title">{{ item.name }}</text>
 							<view class="service-tags">
@@ -276,7 +276,7 @@
 	};
 </script>
 
-<style>
+<style scoped>
 	.container {
 		display: flex;
 		flex-direction: column;
@@ -400,7 +400,6 @@
 
 	.orders-header .title {
 		font-size: 35rpx;
-
 	}
 
 	.view-all {
@@ -469,23 +468,10 @@
 		margin-bottom: 10rpx;
 	}
 
-	.other-features {
-		background-color: #fff999;
-		margin-top: 25rpx;
-		padding: 25rpx;
-		display: flex;
-		justify-content: space-between;
-	}
-
-	.feature-row {
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		color: #333333;
-	}
-
+	/* 修改后的content样式，与第一个页面完全一致 */
 	.content {
-		padding: 20rpx;
+		padding: 10rpx 20rpx;
+		margin-top: 5rpx;
 	}
 
 	.tab-content {
@@ -495,15 +481,14 @@
 	}
 
 	.content-item {
-		width: 48%;
-		margin-bottom: 20rpx;
+		width: 50%;
+		margin-bottom: 15rpx;
 	}
 
 	.product-card {
-		background: #ffffff;
+		background: #f9f9f9;
 		border-radius: 12rpx;
 		overflow: hidden;
-		box-shadow: 0 2rpx 10rpx rgba(0, 0, 0, 0.05);
 	}
 
 	.product-info {
@@ -518,7 +503,7 @@
 
 	.item-title {
 		font-size: 28rpx;
-		color: #000000;
+		color: #000;
 		display: -webkit-box;
 		-webkit-box-orient: vertical;
 		-webkit-line-clamp: 2;
@@ -544,7 +529,7 @@
 	}
 
 	.quick-refund {
-		color: #666666;
+		color: #666;
 		background: #f5f5f5;
 		border-radius: 10rpx;
 	}
@@ -558,13 +543,12 @@
 
 	.price {
 		font-size: 30rpx;
-		color: #e02e24;
+		color: #ff0000;
 		font-weight: bold;
 	}
 
 	.sales {
 		font-size: 24rpx;
-		color: #999999;
-	}
-</style>
+		color: #999;
 
+	}</style>

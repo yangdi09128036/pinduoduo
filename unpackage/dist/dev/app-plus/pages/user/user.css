@@ -551,65 +551,65 @@
 }
 
 
-.container {
+.container[data-v-0f7520f0] {
 		display: flex;
 		flex-direction: column;
 		background-color: #f4f4f4;
 }
-.status-bar {
+.status-bar[data-v-0f7520f0] {
 		height: 1.875rem;
 		background-color: #ffffff;
 }
-.user-header {
+.user-header[data-v-0f7520f0] {
 		padding: 0.625rem 0.9375rem;
 		background-color: #ffffff;
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
 }
-.user-info {
+.user-info[data-v-0f7520f0] {
 		display: flex;
 		align-items: center;
 		gap: 0.625rem;
 }
-.avatar-wrapper {
+.avatar-wrapper[data-v-0f7520f0] {
 		width: 3.125rem;
 		height: 3.125rem;
 		border-radius: 50%;
 		overflow: hidden;
 }
-.user-meta {
+.user-meta[data-v-0f7520f0] {
 		display: flex;
 		flex-direction: column;
 		gap: 0.25rem;
 }
-.nickname-row {
+.nickname-row[data-v-0f7520f0] {
 		display: flex;
 		align-items: center;
 		gap: 0.3125rem;
 }
-.nickname {
+.nickname[data-v-0f7520f0] {
 		font-size: 1.125rem;
 		font-weight: bold;
 }
-.wechat-icon {
+.wechat-icon[data-v-0f7520f0] {
 		width: 1.25rem;
 		height: 1.25rem;
 }
-.address {
+.address[data-v-0f7520f0] {
 		display: flex;
 		align-items: center;
 }
-.address-text {
+.address-text[data-v-0f7520f0] {
 		font-size: 0.9375rem;
 		color: #666666;
 }
-.header-buttons {
+.header-buttons[data-v-0f7520f0] {
 		display: flex;
 		gap: 0.625rem;
 		align-items: center;
 }
-.pindan-btn {
+.pindan-btn[data-v-0f7520f0] {
 		border: #e5e5e5 solid;
 		color: #000000;
 		padding: 0.25rem 0.375rem;
@@ -618,71 +618,71 @@
 		display: flex;
 		align-items: center;
 }
-.settings-icon {
+.settings-icon[data-v-0f7520f0] {
 		width: 1.25rem;
 		height: 1.25rem;
 }
-.monthly-card {
+.monthly-card[data-v-0f7520f0] {
 		background-color: #fff1f0;
 		padding: 0.625rem 0.9375rem;
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
 }
-.card-title {
+.card-title[data-v-0f7520f0] {
 		color: #e02e24;
 		font-size: 0.9375rem;
 		font-weight: 600;
 }
-.card-desc {
+.card-desc[data-v-0f7520f0] {
 		color: #ffffff;
 		font-size: 0.84375rem;
 		background-color: #e02e24;
 		border-radius: 1.25rem;
 		padding: 0.625rem;
 }
-.orders-section {
+.orders-section[data-v-0f7520f0] {
 		background-color: #ffffff;
-		margin-top: 0.625rem;
+		margin-top: 0.3125rem;
 		padding: 0.625rem;
 }
-.orders-header {
+.orders-header[data-v-0f7520f0] {
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
 		padding: 0.625rem 0;
 		border-bottom: 0.03125rem solid #f5f5f5;
 }
-.orders-header .title {
+.orders-header .title[data-v-0f7520f0] {
 		font-size: 1.09375rem;
 }
-.view-all {
+.view-all[data-v-0f7520f0] {
 		color: #999999;
 		font-size: 0.9375rem;
 		display: flex;
 		align-items: center;
 }
-.order-status {
+.order-status[data-v-0f7520f0] {
 		display: flex;
 		justify-content: space-around;
 		padding: 0.9375rem 0;
 }
-.status-item {
+.status-item[data-v-0f7520f0] {
 		display: flex;
 		flex-direction: column;
 		align-items: center;
 		font-size: 0.875rem;
 		color: #333333;
 }
-.icon-wrapper {
+.icon-wrapper[data-v-0f7520f0] {
 		position: relative;
 		margin-bottom: 0.3125rem;
 }
-.status-icon {
+.status-icon[data-v-0f7520f0] {
 		width: 1.875rem;
 		height: 1.875rem;
 }
-.badge {
+.badge[data-v-0f7520f0] {
 		position: absolute;
 		top: -0.3125rem;
 		right: -0.3125rem;
@@ -694,104 +694,93 @@
 		min-width: 0.9375rem;
 		text-align: center;
 }
-.features-section {
+.features-section[data-v-0f7520f0] {
 		display: flex;
 		justify-content: space-around;
 		background-color: #ffffff;
 		padding: 0.9375rem 0;
-		margin-top: 0.625rem;
+		margin-top: 0.3125rem;
 }
-.feature-item {
+.feature-item[data-v-0f7520f0] {
 		display: flex;
 		flex-direction: column;
 		align-items: center;
 		font-size: 0.875rem;
 		color: #333333;
 }
-.feature-icon {
+.feature-icon[data-v-0f7520f0] {
 		width: 1.875rem;
 		height: 1.875rem;
 		margin-bottom: 0.3125rem;
 }
-.other-features {
-		background-color: #fff999;
-		margin-top: 0.78125rem;
-		padding: 0.78125rem;
-		display: flex;
-		justify-content: space-between;
+
+	/* 修改后的content样式，与第一个页面完全一致 */
+.content[data-v-0f7520f0] {
+		padding: 0.3125rem 0.625rem;
+		margin-top: 0.15625rem;
 }
-.feature-row {
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		color: #333333;
-}
-.content {
-		padding: 0.625rem;
-}
-.tab-content {
+.tab-content[data-v-0f7520f0] {
 		display: flex;
 		flex-wrap: wrap;
 		justify-content: space-between;
 }
-.content-item {
-		width: 48%;
-		margin-bottom: 0.625rem;
+.content-item[data-v-0f7520f0] {
+		width: 50%;
+		margin-bottom: 0.46875rem;
 }
-.product-card {
-		background: #ffffff;
+.product-card[data-v-0f7520f0] {
+		background: #f9f9f9;
 		border-radius: 0.375rem;
 		overflow: hidden;
-		box-shadow: 0 0.0625rem 0.3125rem rgba(0, 0, 0, 0.05);
 }
-.product-info {
+.product-info[data-v-0f7520f0] {
 		padding: 0.3125rem;
 }
-.item-image {
+.item-image[data-v-0f7520f0] {
 		width: 100%;
 		height: 10.625rem;
 		object-fit: cover;
 }
-.item-title {
+.item-title[data-v-0f7520f0] {
 		font-size: 0.875rem;
-		color: #000000;
+		color: #000;
 		display: -webkit-box;
 		-webkit-box-orient: vertical;
 		-webkit-line-clamp: 2;
 		overflow: hidden;
 }
-.service-tags {
+.service-tags[data-v-0f7520f0] {
 		margin: 0.3125rem 0;
 }
-.tag {
+.tag[data-v-0f7520f0] {
 		font-size: 0.75rem;
 		padding: 0.125rem 0.375rem;
 		border-radius: 0.125rem;
 		margin-right: 0.3125rem;
 		display: inline-block;
 }
-.pay-later {
+.pay-later[data-v-0f7520f0] {
 		color: #00aa00;
 		background: rgba(76, 175, 80, 0.2);
 		border-radius: 0.3125rem;
 }
-.quick-refund {
-		color: #666666;
+.quick-refund[data-v-0f7520f0] {
+		color: #666;
 		background: #f5f5f5;
 		border-radius: 0.3125rem;
 }
-.price-row {
+.price-row[data-v-0f7520f0] {
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
 		margin-top: 0.3125rem;
 }
-.price {
+.price[data-v-0f7520f0] {
 		font-size: 0.9375rem;
-		color: #e02e24;
+		color: #ff0000;
 		font-weight: bold;
 }
-.sales {
+.sales[data-v-0f7520f0] {
 		font-size: 0.75rem;
-		color: #999999;
+		color: #999;
 }

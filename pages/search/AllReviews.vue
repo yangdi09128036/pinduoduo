@@ -42,7 +42,7 @@
 	};
 </script>
 
-<style>
+<style scoped>
 	/* 样式可以根据需要调整 */
 	.container {
 		

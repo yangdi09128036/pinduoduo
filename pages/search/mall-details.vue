@@ -12,13 +12,19 @@
 				<image class="back-icon" src="/static/left.png" @click="navBack" />
 			</view>
 
-			<!-- 轮播图部分 -->
-			<swiper class="banner" circular :indicator-dots="true" :autoplay="true" interval="3000" duration="1000">
-				<swiper-item v-for="(item, index) in convertToBannerArray(goodsInfo.goods_banner_imgs)" :key="index">
-					<image :src="item.url" mode="aspectFill" class="banner-image">
-					</image>
-				</swiper-item>
-			</swiper>
+			<!-- 修改后的轮播图部分 -->
+			<view class="banner-container">
+			    <swiper class="banner" circular :indicator-dots="false" :autoplay="true" 
+			            interval="3000" duration="1000" @change="onSwiperChange">
+			        <swiper-item v-for="(item, index) in convertToBannerArray(goodsInfo.goods_banner_imgs)" :key="index">
+			            <image :src="item.url" mode="aspectFill" class="banner-image"></image>
+			        </swiper-item>
+			    </swiper>
+			    <!-- 将指示器移到swiper外部 -->
+			    <view class="custom-indicator">
+			        {{ currentSwiperIndex + 1 }}/{{ convertToBannerArray(goodsInfo.goods_banner_imgs).length }}
+			    </view>
+			</view>
 
 
 			<!-- 价格营销信息 -->
@@ -207,6 +213,7 @@
 	export default {
 		data() {
 			return {
+				currentSwiperIndex: 0,
 				goodsInfo: {
 							reviews: [] // 初始化为空数组，避免未定义
 						},
@@ -295,6 +302,9 @@
 			        this.isLoading = false;
 			    }
 			},
+			onSwiperChange(e) {
+			      this.currentSwiperIndex = e.detail.current;
+			  },
 			// 初始化倒计时
 			initCountdown() {
 				const savedEndTime = uni.getStorageSync('countdownEndTime');
@@ -613,7 +623,7 @@
 	}
 </script>
 
-<style>
+<style scoped>
 	.container {
 		padding-bottom: 100rpx;
 		background-color: #f7f7f7;
@@ -638,15 +648,37 @@
 		height: 60rpx;
 	}
 
+	/* 新增轮播图容器样式 */
+	.banner-container {
+	    position: relative;
+	    width: 100%;
+	    height: 750rpx;
+	}
+	
+	/* 调整轮播图样式 */
 	.banner {
-		width: 100%;
-		height: 750rpx;
+	    width: 100%;
+	    height: 100%;
+	}
+	
+	/* 更新自定义指示器样式 */
+	.custom-indicator {
+	    position: absolute;
+	    right: 30rpx;
+	    bottom: 30rpx;
+	    background-color: rgba(0, 0, 0, 0.5);
+	    color: white;
+	    font-size: 24rpx;
+	    padding: 8rpx 16rpx;
+	    border-radius: 20rpx;
+	    z-index: 9;
 	}
 
 	.banner-image {
 		width: 100%;
 		height: 100%;
 	}
+	
 
 	/* 价格营销区域样式 */
 	.price-marketing {

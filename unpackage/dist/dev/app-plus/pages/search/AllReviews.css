@@ -1,8 +1,8 @@
 
 	/* 样式可以根据需要调整 */
-.container {
+.container[data-v-e2a772c1] {
 }
-.nav-bar {
+.nav-bar[data-v-e2a772c1] {
 		background: #ff5762;
 		padding: 40px 20px 20px;
 		display: flex;
@@ -10,55 +10,55 @@
 		align-items: center;
 		color: #fff;
 }
-.nav-left {
+.nav-left[data-v-e2a772c1] {
 		display: flex;
 		align-items: center;
 }
-.nav-icon {
+.nav-icon[data-v-e2a772c1] {
 		width: 1.875rem;
 		height: 1.875rem;
 		margin-right: 10px;
 }
-.nav-title {
+.nav-title[data-v-e2a772c1] {
 		font-size: 22px;
 }
-.reviews-header {
+.reviews-header[data-v-e2a772c1] {
 		margin-bottom: 0.625rem;
 }
-.reviews-list {
+.reviews-list[data-v-e2a772c1] {
 		padding: 0.625rem;
 		margin-top: 0.625rem;
 }
-.review-item {
+.review-item[data-v-e2a772c1] {
 		display: flex;
 		margin-bottom: 0.9375rem;
 		border-bottom: 0.03125rem solid #999;
 }
-.review-avatar {
+.review-avatar[data-v-e2a772c1] {
 		width: 2.5rem;
 		height: 2.5rem;
 		border-radius: 1.25rem;
 		overflow: hidden;
 		margin-right: 0.625rem;
 }
-.avatar-image {
+.avatar-image[data-v-e2a772c1] {
 		width: 100%;
 		height: 100%;
 }
-.review-content {
+.review-content[data-v-e2a772c1] {
 		flex: 1;
 }
-.review-user {
+.review-user[data-v-e2a772c1] {
 		font-size: 0.875rem;
 		color: #666;
 		margin-bottom: 0.3125rem;
 }
-.review-text {
+.review-text[data-v-e2a772c1] {
 		font-size: 0.875rem;
 		color: #333;
 		margin-bottom: 0.625rem;
 }
-.no-reviews {
+.no-reviews[data-v-e2a772c1] {
 		text-align: center;
 		color: #999;
 }

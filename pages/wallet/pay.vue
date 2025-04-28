@@ -244,7 +244,7 @@
 	}
 </script>
 
-<style>
+<style scoped>
 	.pay-container {
 		position: fixed;
 		left: 0;

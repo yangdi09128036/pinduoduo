@@ -1,21 +1,35 @@
 <template>
 	<view class="login-container">
+		<view class="login-bg"></view>
 		<view class="login-content">
 			<view class="login-logo">
-				<image src="/static/logo.png" mode="widthFix" class="logo-image"></image>
+				<image src="/static/avatar-default.png" mode="widthFix" class="logo-image"></image>
 			</view>
-			<uni-forms class="form-container">
-				<uni-forms-item name="username">
-					<uni-easyinput :focus="focusUsername" @blur="focusUsername = false" class="input-box username-input"
-						:inputBorder="false" v-model="username" placeholder="请输入用户名" trim="all" />
-				</uni-forms-item>
-				<uni-forms-item name="password">
-					<uni-easyinput :focus="focusPassword" @blur="focusPassword = false" class="input-box password-input"
-						clearable type="password" :inputBorder="false" v-model="password" placeholder="请输入密码"
-						trim="all" />
-				</uni-forms-item>
-			</uni-forms>
-			<!-- <button class="login-button" type="primary" @click="wechat">微信一键登录</button> -->
+			<view class="form-container">
+				<view class="form-item">
+					<input 
+						class="input-box username-input"
+						placeholder="请输入用户名" 
+						placeholder-style="color: #fff"
+						v-model="username" 
+						@focus="focusUsername = true"
+						@blur="focusUsername = false"
+						:focus="focusUsername"
+					/>
+				</view>
+				<view class="form-item">
+					<input 
+						class="input-box password-input"
+						type="password" 
+						placeholder="请输入密码" 
+						placeholder-style="color: #fff"
+						v-model="password" 
+						@focus="focusPassword = true"
+						@blur="focusPassword = false"
+						:focus="focusPassword"
+					/>
+				</view>
+			</view>
 			<button class="login-button" type="primary" @click="pwdLogin">登录</button>
 			<view class="link-container">
 				<view v-if="!config.isAdmin">
@@ -26,8 +40,6 @@
 		</view>
 	</view>
 </template>
-
-
 
 <script>
 	import mixin from '@/uni_modules/uni-id-pages/common/login-page.mixin.js';
@@ -41,14 +53,33 @@
 		mixins: [mixin],
 		data() {
 			return {
-				password: "",
 				username: "",
+				password: "",
 				focusUsername: false,
 				focusPassword: false,
 				logo: "/static/logo.png",
+				config: {
+					isAdmin: false
+				}
+			};
+		},
+		onLoad() {
+			// 检查是否有临时存储的用户名和密码
+			const tempUsername = uni.getStorageSync('temp_username');
+			const tempPassword = uni.getStorageSync('temp_password');
+			if (tempUsername && tempPassword) {
+				this.username = tempUsername;
+				this.password = tempPassword;
+
+				// 清除临时存储
+				uni.removeStorageSync('temp_username');
+				uni.removeStorageSync('temp_password');
 			}
 		},
 		onShow() {
+			// 检查是否已登录
+			this.checkLoginStatus();
+
 			// #ifdef H5
 			document.onkeydown = event => {
 				var e = event || window.event;
@@ -59,78 +90,85 @@
 			// #endif
 		},
 		methods: {
+			// 检查登录状态
+			// 替换原来的 checkLoginStatus 方法
+			async checkLoginStatus() {
+				const token = uni.getStorageSync('uni_id_token');
+				if (!token) return;
+
+				try {
+					await new Promise(resolve => setTimeout(resolve, 1000));
+
+					uni.showToast({
+						title: '已登录',
+						icon: 'success',
+						duration: 2000
+					});
+
+					setTimeout(() => {
+						uni.switchTab({
+							url: '/pages/index/index'
+						});
+					}, 2000);
+				} catch (e) {
+					console.log('检查登录状态出错:', e);
+				}
+			},
 			toRetrievePwd() {
 				uni.showToast({
 					icon: "error",
 					title: "该功能暂未实现"
 				})
 			},
-			pwdLogin() {
+
+			async pwdLogin() {
 				if (!this.username.length) {
-					this.focusUsername = true
+					this.focusUsername = true;
 					return uni.showToast({
 						title: '请输入用户名',
-						icon: 'none',
-						duration: 3000
+						icon: 'none'
 					});
 				}
 				if (!this.password.length) {
-					this.focusPassword = true
+					this.focusPassword = true;
 					return uni.showToast({
 						title: '请输入密码',
+						icon: 'none'
+					});
+				}
+
+				try {
+					uni.showToast({
+						title: '登录中...',
 						icon: 'none',
-						duration: 3000
+						duration: 1000
 					});
-				}
 
-				if (this.needAgreements && !this.agree) {
-					return this.$refs.agreements.popup(this.pwdLogin)
-				}
+					const data = {
+						password: this.password,
+						[(/^1\d{10}$/.test(this.username) ? 'mobile' :
+							/@/.test(this.username) ? 'email' : 'username')]: this.username
+					};
 
-				let data = {
-					password: this.password
-				}
+					const e = await uniIdCo.login(data);
+					this.loginSuccess(e);
 
-				if (/^1\d{10}$/.test(this.username)) {
-					data.mobile = this.username
-				} else if (/@/.test(this.username)) {
-					data.email = this.username
-				} else {
-					data.username = this.username
-				}
-
-				uniIdCo.login(data)
-					.then(e => {
-						this.loginSuccess(e);
-						uni.showToast({
-							title: '登录成功',
-							icon: 'success',
-							duration: 1000
-						});
-						setTimeout(() => {
-							uni.switchTab({
-								url: '/pages/index/index'
-							});
-						}, 1000); // 2秒后跳转
-					})
-					.catch(e => {
-						console.error('登录失败：', e); // 输出错误到控制台
-
-						let errorMessage = '登录失败，请重试';
-						if (e.errCode === 'uni-id-captcha-required') {
-							errorMessage = '需要验证码登录，请稍后重试';
-							// 这里可以处理验证码相关逻辑
-						} else if (e.message) {
-							errorMessage = e.message; // 使用后端返回的错误信息
-						}
-
-						uni.showToast({
-							title: errorMessage,
-							icon: 'none',
-							duration: 3000
-						});
+					uni.showToast({
+						title: '登录成功',
+						icon: 'success',
+						duration: 1500
 					});
+
+					setTimeout(() => {
+						uni.switchTab({
+							url: '/pages/index/index'
+						});
+					}, 1500);
+				} catch (e) {
+					this.handleLoginError(e);
+				}
 			},
+
 			toRegister() {
 				uni.navigateTo({
 					url: this.config.isAdmin ? '/uni_modules/uni-id-pages/pages/register/register-admin' :
@@ -140,132 +178,134 @@
 					}
 				})
 			},
-			wechat(){
-				uni.navigateTo({
-					url:'/uni_modules/uni-id-pages/pages/login/login-withoutpwd'
-				})
+			handleLoginError(error) {
+				console.error('登录错误:', error);
+
+				let message = '登录失败，请重试';
+				if (error.errCode === 'uni-id-account-not-exists') {
+					message = '账号不存在';
+				} else if (error.errCode === 'uni-id-password-error') {
+					message = '密码错误';
+				} else if (error.message) {
+					message = error.message;
+				}
+
+				uni.showToast({
+					title: message,
+					icon: 'none'
+				});
 			}
 		}
 	}
 </script>
 
-<style lang="scss">
-	.login-container {
-		display: flex;
-		justify-content: center;
-		align-items: center;
-		min-height: 100vh;
-		background: linear-gradient(50deg, #4b6cb7, #aaaaff);
-		padding: 20px;
-	}
+<style scoped>
+.login-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  padding: 40rpx;
+  position: relative;
+}
 
-	.login-content {
-		position: relative;
-		width: 100%;
-		max-width: 400px;
-		background: rgba(255, 255, 255, 0.95);
-		border-radius: 20px;
-		padding: 40px 30px;
-		box-shadow: 0 15px 30px rgba(0, 0, 0, 0.1);
-		animation: fadeIn 0.8s ease-in-out;
-	}
+.login-bg {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: url('/static/zjl.png');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  z-index: -1;
+  opacity: 0.9;
+}
 
-	@keyframes fadeIn {
-		from {
-			opacity: 0;
-			transform: translateY(-20px);
-		}
+.login-content {
+  position: relative;
+  width: 100%;
+  max-width: 800rpx;
+  background: rgba(255, 255, 255, 0.3);
+  backdrop-filter: blur(20px);
+  border-radius: 40rpx;
+  padding: 80rpx 60rpx;
+  box-shadow: 0 30rpx 60rpx rgba(0, 0, 0, 0.5);
+  animation: fadeIn 0.8s ease-in-out;
+}
 
-		to {
-			opacity: 1;
-			transform: translateY(0);
-		}
-	}
+.login-logo {
+  text-align: center;
+  margin-bottom: 60rpx;
+}
 
-	.login-logo {
-		text-align: center;
-		margin-bottom: 30px;
-	}
+.logo-image {
+  width: 200rpx;
+  height: 200rpx;
+  border-radius: 20%;
+  margin: 0 auto;
+}
 
-	.logo-image {
-		width: 100px;
-		height: 100px;
-		border-radius: 50%;
-		margin: 0 auto;
-	}
+.form-container {
+  margin-bottom: 50rpx;
+}
 
-	.form-container {
-		.input-box {
-			margin-bottom: 25px;
-			border-radius: 12px;
-			transition: all 0.3s ease;
+.form-item {
+  margin-bottom: 50rpx;
+  position: relative;
+}
 
-			&:focus {
-				box-shadow: 0 0 10px rgba(63, 81, 181, 0.3);
+.form-item:after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  height: 3rpx;
+  background: rgba(255, 255, 255);
+}
 
-			}
+.input-box {
+  width: 100%;
+  height: 50rpx;
+  font-size: 28rpx;
+  color: #fff;
+  border: none;
+  background-color: transparent;
+  padding: 10rpx 0;
+}
 
-			::v-deep .uni-easyinput__content-input {
-				font-size: 16px;
 
-				&::placeholder {
-					font-size: 16px; // 设置占位符字体大小
-				}
-			}
-		}
+.login-button {
+  display: flex; /* 使用 Flexbox 布局 */
+  justify-content: center; /* 水平居中 */
+  align-items: center; 
+  padding: 50rpx;
+  width: 100%;
+  height: 100rpx;
+  margin-top: 50rpx;
+  border-radius: 24rpx;
+  background: #6a5acd;
+  color: #fff;
+  font-size: 32rpx;
+  border: none;
+}
 
-		.username-input,
-		.password-input {
-			--input-text-color: #333;
-			--input-placeholder-color: #999;
-			--input-border-color: #eee;
-			--input-hover-border-color: #666;
-		}
-	}
+.link-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 30rpx;
+  padding-top: 30rpx;
+}
 
-	.login-button {
-		width: 100%;
-		height: 50px;
-		margin-top: 25px;
-		border-radius: 12px;
-		background: linear-gradient(50deg, #4b6cb7, #aaaaff);
-		color: white;
-		font-weight: bold;
-		transition: all 0.3s ease;
+.link-text {
+  color: rgba(255, 255, 255);
+  font-size: 28rpx;
+}
 
-		&:hover {
-			opacity: 0.9;
-			transform: translateY(-2px);
-		}
-
-		&:active {
-			transform: translateY(2px);
-			opacity: 0.8;
-		}
-	}
-
-	.link-container {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		margin-top: 25px;
-		padding-top: 25px;
-		border-top: 1px solid #eee;
-
-		.link-text {
-			color: #666;
-			font-size: 14px;
-			cursor: pointer;
-			transition: all 0.3s ease;
-
-			&:hover {
-				color: #4b6cb7;
-				text-decoration: underline;
-			}
-		}
-
-		.retrieve-pwd {
-			margin-right: 20px;
-		}
-	}
+.retrieve-pwd {
+  margin-right: 40rpx;
+}
 </style>

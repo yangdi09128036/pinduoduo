@@ -2,7 +2,7 @@
 	<view class="container">
 		<!-- 顶部导航栏 -->
 		<view class="status-bar"></view>
-	
+
 		<view class="nav-bar">
 			<view class="nav-left" @click="navBack">
 				<image src="/static/left.png" class="back-icon"></image>
@@ -53,7 +53,7 @@
 			</view>
 		</scroll-view>
 
-		<!-- 底部结算栏 -->
+		<!-- 修改底部结算栏部分 -->
 		<view class="bottom-bar" v-if="favorItems.length > 0">
 			<view class="total-section">
 				<text class="total-label">合计：</text>
@@ -62,6 +62,10 @@
 					<text>{{ totalPrice }}</text>
 				</text>
 			</view>
+			<!-- 新增的移除按钮 -->
+			<button class="remove-all-btn" @click="removeSelectedItems" :disabled="selectedItems.length === 0">
+				移除收藏
+			</button>
 			<button class="checkout-btn" @click="handleCheckout" :disabled="selectedItems.length === 0">
 				去结算 ({{ selectedItems.length }})
 			</button>
@@ -170,6 +174,42 @@
 				}
 				this.isAllSelected = !this.isAllSelected
 			},
+			async removeSelectedItems() {
+				if (this.selectedItems.length === 0) {
+					uni.showToast({
+						title: '请选择要移除的商品',
+						icon: 'none'
+					});
+					return;
+				}
+
+				try {
+					const db = uniCloud.database();
+					// 批量删除收藏记录
+					await db.collection('favor')
+						.where({
+							userId: this.userInfo._id,
+							productId: uniCloud.database().command.in(this.selectedItems)
+						})
+						.remove();
+
+					// 更新本地数据
+					this.favorItems = this.favorItems.filter(item => !this.selectedItems.includes(item._id));
+					this.selectedItems = [];
+					this.isAllSelected = false;
+
+					uni.showToast({
+						title: '已移除选中收藏',
+						icon: 'success'
+					});
+				} catch (error) {
+					console.error('移除收藏失败:', error);
+					uni.showToast({
+						title: '移除收藏失败，请重试',
+						icon: 'none'
+					});
+				}
+			},
 			async handleCheckout() {
 				if (this.selectedItems.length === 0) {
 					uni.showToast({
@@ -181,7 +221,7 @@
 
 				const selectedProducts = this.favorItems.filter(item => this.selectedItems.includes(item._id))
 				const totalAmount = parseFloat(this.totalPrice)
-				console.log("商品总价",totalAmount);
+				console.log("商品总价", totalAmount);
 
 				const paymentData = {
 					amount: totalAmount,
@@ -200,7 +240,7 @@
 				try {
 					const db = uniCloud.database()
 					const orderIds = []
-					
+
 					// 为每个选中的商品创建单独的订单
 					for (const itemId of this.selectedItems) {
 						const product = this.favorItems.find(item => item._id === itemId)
@@ -221,7 +261,7 @@
 							orderIds.push(orderResult.result.id)
 						}
 					}
-					
+
 					// 存储所有订单ID
 					paymentData.orderIds = orderIds
 					uni.setStorageSync('paymentData', paymentData)
@@ -280,41 +320,46 @@
 	}
 </script>
 
-<style>
+<style scoped>
 	.container {
 		min-height: 100vh;
 		background-color: #fff;
 		padding-bottom: 120rpx;
 	}
+
 	/* 新增状态栏样式 */
-		.status-bar {
-			height: 50rpx;
-			width: 100%;
-			background: #fff;
-		}
-		
-		/* 修改导航栏样式 */
-		.nav-bar {
-			position: sticky; /* 改为 sticky 定位 */
-			top: var(--status-bar-height); /* 固定在状态栏下方 */
-			left: 0;
-			right: 0;
-			height: 100rpx;
-			background: #fff;
-			display: flex;
-			justify-content: space-between;
-			align-items: center;
-			padding: 0 30rpx;
-			z-index: 100;
-			/* 移除原来的 margin-top */
-		}
-		
-		/* 修改内容区域样式 */
-		.favor-list {
-			margin-top: 0; /* 移除原来的 margin-top */
-			padding: 20rpx;
-			height: calc(100vh - var(--status-bar-height) - 88rpx - 100rpx); /* 调整高度计算 */
-		}
+	.status-bar {
+		height: 50rpx;
+		width: 100%;
+		background: #fff;
+	}
+
+	/* 修改导航栏样式 */
+	.nav-bar {
+		position: sticky;
+		/* 改为 sticky 定位 */
+		top: var(--status-bar-height);
+		/* 固定在状态栏下方 */
+		left: 0;
+		right: 0;
+		height: 100rpx;
+		background: #fff;
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		padding: 0 30rpx;
+		z-index: 100;
+		/* 移除原来的 margin-top */
+	}
+
+	/* 修改内容区域样式 */
+	.favor-list {
+		margin-top: 0;
+		/* 移除原来的 margin-top */
+		padding: 20rpx;
+		height: calc(100vh - var(--status-bar-height) - 88rpx - 100rpx);
+		/* 调整高度计算 */
+	}
 
 	.nav-left,
 	.nav-right {
@@ -339,7 +384,10 @@
 		flex-direction: column;
 		align-items: center;
 		justify-content: center;
-		height: 100%;
+		height: 80%;
+		font-size: 32rpx;
+		font-weight: bold;
+		color: #000;
 	}
 
 	.empty-icon {
@@ -353,6 +401,7 @@
 		background-color: #ff4040;
 		color: #fff;
 		border: none;
+		width: 80%;
 		padding: 20rpx 40rpx;
 		border-radius: 10rpx;
 	}
@@ -360,7 +409,7 @@
 	.favor-item {
 		display: flex;
 		align-items: center;
-		background-color: #f2f7ff;
+		background-color: #f5f5f5;
 		padding: 20rpx;
 		margin-bottom: 20rpx;
 		border-radius: 12rpx;
@@ -498,6 +547,21 @@
 	.checkout-btn[disabled] {
 		background-color: #ccc;
 		color: #fff;
+	}
+
+	.remove-all-btn {
+		background-color: #f5f5f5;
+		color: #666;
+		font-size: 28rpx;
+		padding: 0 30rpx;
+		height: 72rpx;
+		line-height: 72rpx;
+		border-radius: 10rpx;
+		margin: 0 20rpx;
+	}
+
+	.remove-all-btn[disabled] {
+		color: #ccc;
 	}
 
 	.loading {

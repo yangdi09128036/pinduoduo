@@ -20,9 +20,7 @@ const mixin = {
 	},
 	onLoad(e) {
 		if (e.is_weixin_redirect) {
-			uni.showLoading({
-				mask: true
-			})
+			
 
 			if (window.location.href.includes('#')) {
 				// 将url通过 ? 分割获取后面的参数字符串 再通过 & 将每一个参数单独分割出来

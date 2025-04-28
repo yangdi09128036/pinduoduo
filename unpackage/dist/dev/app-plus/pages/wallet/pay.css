@@ -1,5 +1,5 @@
 
-.pay-container {
+.pay-container[data-v-6e3ba243] {
 		position: fixed;
 		left: 0;
 		right: 0;
@@ -10,14 +10,14 @@
 		flex-direction: column;
 		justify-content: flex-end;
 }
-.pay-popup {
+.pay-popup[data-v-6e3ba243] {
 		background-color: #fff;
 		border-radius: 0.75rem 0.75rem 0 0;
 		padding: 1.25rem;
 		position: relative;
-		animation: slideUp 0.3s ease-out;
+		animation: slideUp-6e3ba243 0.3s ease-out;
 }
-@keyframes slideUp {
+@keyframes slideUp-6e3ba243 {
 from {
 			transform: translateY(100%);
 }
@@ -25,86 +25,86 @@ to {
 			transform: translateY(0);
 }
 }
-.close-btn {
+.close-btn[data-v-6e3ba243] {
 		position: absolute;
 		top: 0.625rem;
 		left: 0.625rem;
 		padding: 0.625rem;
 }
-.close-icon {
+.close-icon[data-v-6e3ba243] {
 		font-size: 1.875rem;
 		color: #999;
 }
-.user-info {
+.user-info[data-v-6e3ba243] {
 		display: flex;
 		flex-direction: column;
 		align-items: center;
 		margin-bottom: 1.25rem;
 }
-.user-avatar {
+.user-avatar[data-v-6e3ba243] {
 		width: 3.75rem;
 		height: 3.75rem;
 		border-radius: 1.875rem;
 		margin-bottom: 0.625rem;
 }
-.user-phone {
+.user-phone[data-v-6e3ba243] {
 		font-size: 1rem;
 		color: #333;
 }
-.merchant-info {
+.merchant-info[data-v-6e3ba243] {
 		text-align: center;
 		margin-bottom: 1.875rem;
 }
-.merchant-name {
+.merchant-name[data-v-6e3ba243] {
 		font-size: 0.875rem;
 		color: #666;
 		margin-bottom: 0.625rem;
 		display: block;
 }
-.payment-amount {
+.payment-amount[data-v-6e3ba243] {
 		font-size: 2.25rem;
 		font-weight: bold;
 		color: #333;
 }
-.account-section {
+.account-section[data-v-6e3ba243] {
 		padding: 0.625rem 0;
 		border-bottom: 1px solid #eee;
 		margin-bottom: 0.625rem;
 }
-.section-title {
+.section-title[data-v-6e3ba243] {
 		font-size: 0.875rem;
 		color: #999;
 		margin-bottom: 0.3125rem;
 }
-.account-number {
+.account-number[data-v-6e3ba243] {
 		font-size: 1rem;
 		color: #333;
 }
-.payment-methods {
+.payment-methods[data-v-6e3ba243] {
 		margin-bottom: 1.25rem;
 }
-.method-item {
+.method-item[data-v-6e3ba243] {
 		display: flex;
 		align-items: center;
 		padding: 0.9375rem 0;
 		border-radius: 0.46875rem;
 		border-bottom: 1px solid #eee;
 }
-.method-icon {
+.method-icon[data-v-6e3ba243] {
 		width: 1.5rem;
 		height: 1.5rem;
 		margin-right: 0.625rem;
 }
-.method-name {
+.method-name[data-v-6e3ba243] {
 		flex: 1;
 		font-size: 0.875rem;
 		color: #333;
 }
-.method-check {
+.method-check[data-v-6e3ba243] {
 		color: #1890ff;
 		font-size: 1rem;
 }
-.confirm-btn {
+.confirm-btn[data-v-6e3ba243] {
 		background-color: #1890ff;
 		color: #fff;
 		font-size: 1rem;
@@ -113,14 +113,14 @@ to {
 		border-radius: 1.375rem;
 		margin: 1.25rem 0;
 }
-.service-provider {
+.service-provider[data-v-6e3ba243] {
 		text-align: center;
 		padding: 0.625rem 0;
 }
-.provider-text {
+.provider-text[data-v-6e3ba243] {
 		font-size: 0.75rem;
 		color: #999;
 }
-.selected {
+.selected[data-v-6e3ba243] {
 		background-color: #f8f8f8;
 }

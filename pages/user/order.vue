@@ -909,7 +909,7 @@
 	}
 </script>
 
-<style>
+<style scoped>
 	.status-bar {
 		height: 35px;
 		background-color: #ffffff;
@@ -1124,11 +1124,11 @@
 	}
 
 	.order-item {
-		background-color: #eee;
+		background-color: #f5f5f5;
 		border-radius: 10rpx;
-		margin: 8rpx;
+		margin: 10rpx;
 		padding: 15rpx;
-		box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.05);
+		box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.01);
 	}
 
 	.store-info {
@@ -1180,7 +1180,7 @@
 
 	.product-desc {
 		font-size: 24rpx;
-		color: #999;
+		color: #eee;
 		margin-bottom: 10rpx;
 	}
 

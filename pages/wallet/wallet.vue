@@ -355,14 +355,14 @@
 	}
 </script>
 
-<style>
+<style scoped>
 	.wallet-container {
 		min-height: 100vh;
 		background-color: #f5f5f5;
 	}
 
 	.nav-bar {
-		background: #ff5762;
+		background: #CC3333;
 		padding: 40px 20px 20px;
 		display: flex;
 		justify-content: space-between;
@@ -456,7 +456,7 @@
 	}
 
 	.recharge {
-		background: #ff5762;
+		background: #CC3333;
 		color: #fff;
 		border: none;
 	}

@@ -19,7 +19,7 @@ export default {
 };
 </script>
 
-<style>
+<style scoped>
 .webview-container {
   width: 100%;
   height: 100vh;

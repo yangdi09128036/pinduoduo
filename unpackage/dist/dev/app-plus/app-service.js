@@ -628,7 +628,7 @@ if (uni.restoreGlobal) {
   function I(e2) {
     return e2 && "string" == typeof e2 ? JSON.parse(e2) : e2;
   }
-  const S = true, b = "app", T = I(define_process_env_UNI_SECURE_NETWORK_CONFIG_default), A = b, P = I('{"address":["127.0.0.1","192.168.206.1","192.168.89.1","10.30.108.158","172.23.144.1"],"servePort":7000,"debugPort":9000,"initialLaunchType":"local","skipFiles":["<node_internals>/**","D:/HBuilderX/plugins/unicloud/**/*.js"]}'), C = I('[{"provider":"aliyun","spaceName":"pdd","spaceId":"mp-0dcd11a4-5797-4c2e-9b6e-d28808479dcd","clientSecret":"OmlJkqdgJblOVBVMC7xDug==","endpoint":"https://api.next.bspapp.com"}]') || [];
+  const S = true, b = "app", T = I(define_process_env_UNI_SECURE_NETWORK_CONFIG_default), A = b, P = I('{"address":["127.0.0.1","192.168.206.1","192.168.89.1","10.30.108.158","172.20.0.1"],"servePort":7000,"debugPort":9000,"initialLaunchType":"remote","skipFiles":["<node_internals>/**","D:/HBuilderX/plugins/unicloud/**/*.js"]}'), C = I('[{"provider":"aliyun","spaceName":"pdd","spaceId":"mp-0dcd11a4-5797-4c2e-9b6e-d28808479dcd","clientSecret":"OmlJkqdgJblOVBVMC7xDug==","endpoint":"https://api.next.bspapp.com"}]') || [];
   let O = "";
   try {
     O = "__UNI__1D20EA0";
@@ -3189,6 +3189,2850 @@ ${i3}
     }
   })();
   var nr = tr;
+  const config = {
+    // 调试模式
+    debug: false,
+    /*
+    	登录类型 未列举到的或运行环境不支持的，将被自动隐藏。
+    	如果需要在不同平台有不同的配置，直接用条件编译即可
+    */
+    isAdmin: false,
+    // 区分管理端与用户端
+    loginTypes: [
+      // "qq",
+      // "xiaomi",
+      // "sinaweibo",
+      // "taobao",
+      // "facebook",
+      // "google",
+      // "alipay",
+      // "douyin",
+      "univerify",
+      "weixin",
+      "username",
+      "apple",
+      "smsCode"
+    ],
+    // 政策协议
+    agreements: {
+      serviceUrl: "https://xxx",
+      // 用户服务协议链接
+      privacyUrl: "https://xxx",
+      // 隐私政策条款链接
+      // 哪些场景下显示，1.注册（包括登录并注册，如：微信登录、苹果登录、短信验证码登录）、2.登录（如：用户名密码登录）
+      scope: [
+        "register",
+        "login",
+        "realNameVerify"
+      ]
+    },
+    // 提供各类服务接入（如微信登录服务）的应用id
+    appid: {
+      weixin: {
+        // 微信公众号的appid，来源:登录微信公众号（https://mp.weixin.qq.com）-> 设置与开发 -> 基本配置 -> 公众号开发信息 -> AppID
+        h5: "wx2489521bfcd40296",
+        // 微信开放平台的appid，来源:登录微信开放平台（https://open.weixin.qq.com） -> 管理中心 -> 网站应用 -> 选择对应的应用名称，点击查看 -> AppID
+        web: "wx2489521bfcd40296"
+      }
+    },
+    /**
+    * 密码强度
+    * super（超强：密码必须包含大小写字母、数字和特殊符号，长度范围：8-16位之间）
+    * strong（强: 密密码必须包含字母、数字和特殊符号，长度范围：8-16位之间）
+    * medium (中：密码必须为字母、数字和特殊符号任意两种的组合，长度范围：8-16位之间)
+    * weak（弱：密码必须包含字母和数字，长度范围：6-16位之间）
+    * 为空或false则不验证密码强度
+    */
+    passwordStrength: "weak",
+    /**
+    * 登录后允许用户设置密码（只针对未设置密码得用户）
+    * 开启此功能将 setPasswordAfterLogin 设置为 true 即可
+    * "setPasswordAfterLogin": false
+    *
+    * 如果允许用户跳过设置密码 将 allowSkip 设置为 true
+    * "setPasswordAfterLogin": {
+    *   "allowSkip": true
+    * }
+    * */
+    setPasswordAfterLogin: false
+  };
+  const uniIdCo$b = nr.importObject("uni-id-co");
+  const db$3 = nr.database();
+  const usersTable = db$3.collection("uni-id-users");
+  let hostUserInfo = uni.getStorageSync("uni-id-pages-userInfo") || {};
+  const data = {
+    userInfo: hostUserInfo,
+    hasLogin: Object.keys(hostUserInfo).length != 0
+  };
+  const mutations = {
+    // data不为空，表示传递要更新的值(注意不是覆盖是合并),什么也不传时，直接查库获取更新
+    async updateUserInfo(data2 = false) {
+      if (data2) {
+        usersTable.where("_id==$env.uid").update(data2).then((e) => {
+          if (e.result.updated) {
+            uni.showToast({
+              title: "更新成功",
+              icon: "none",
+              duration: 3e3
+            });
+            this.setUserInfo(data2);
+          } else {
+            uni.showToast({
+              title: "没有改变",
+              icon: "none",
+              duration: 3e3
+            });
+          }
+        });
+      } else {
+        const _id = nr.getCurrentUserInfo().uid;
+        this.setUserInfo({ _id }, { cover: true });
+        const uniIdCo2 = nr.importObject("uni-id-co", {
+          customUI: true
+        });
+        try {
+          let res = await usersTable.where("'_id' == $cloudEnv_uid").field("mobile,nickname,username,email,avatar_file,mobile,address").get();
+          const realNameRes = await uniIdCo2.getRealNameInfo();
+          this.setUserInfo({
+            ...res.result.data[0],
+            realNameAuth: realNameRes
+          });
+        } catch (e) {
+          this.setUserInfo({}, { cover: true });
+          formatAppLog("error", "at uni_modules/uni-id-pages/common/store.js:60", e.message, e.errCode);
+        }
+      }
+    },
+    setUserInfo(data2, { cover } = { cover: false }) {
+      let userInfo = cover ? data2 : Object.assign(store.userInfo, data2);
+      store.userInfo = Object.assign({}, userInfo);
+      store.hasLogin = Object.keys(store.userInfo).length != 0;
+      uni.setStorageSync("uni-id-pages-userInfo", store.userInfo);
+      return data2;
+    },
+    async logout() {
+      if (nr.getCurrentUserInfo().tokenExpired > Date.now()) {
+        try {
+          await uniIdCo$b.logout();
+        } catch (e) {
+          formatAppLog("error", "at uni_modules/uni-id-pages/common/store.js:79", e);
+        }
+      }
+      uni.removeStorageSync("uni_id_token");
+      uni.setStorageSync("uni_id_token_expired", 0);
+      this.setUserInfo({}, { cover: true });
+      uni.$emit("uni-id-pages-logout");
+      uni.redirectTo({
+        url: `/${pagesJson.uniIdRouter && pagesJson.uniIdRouter.loginPage ? pagesJson.uniIdRouter.loginPage : "uni_modules/uni-id-pages/pages/login/login-withoutpwd"}`
+      });
+    },
+    loginBack(e = {}) {
+      const { uniIdRedirectUrl = "" } = e;
+      let delta = 0;
+      let pages2 = getCurrentPages();
+      pages2.forEach((page, index) => {
+        if (pages2[pages2.length - index - 1].route.split("/")[3] == "login") {
+          delta++;
+        }
+      });
+      if (uniIdRedirectUrl) {
+        return uni.redirectTo({
+          url: uniIdRedirectUrl,
+          fail: (err1) => {
+            uni.switchTab({
+              url: uniIdRedirectUrl,
+              fail: (err2) => {
+                formatAppLog("log", "at uni_modules/uni-id-pages/common/store.js:108", err1, err2);
+              }
+            });
+          }
+        });
+      }
+      if (delta) {
+        const page = pagesJson.pages[0];
+        return uni.reLaunch({
+          url: `/${page.path}`
+        });
+      }
+      uni.navigateBack({
+        delta
+      });
+    },
+    loginSuccess(e = {}) {
+      const {
+        showToast = true,
+        toastText = "登录成功",
+        autoBack = true,
+        uniIdRedirectUrl = "",
+        passwordConfirmed
+      } = e;
+      if (showToast) {
+        uni.showToast({
+          title: toastText,
+          icon: "none",
+          duration: 3e3
+        });
+      }
+      this.updateUserInfo();
+      uni.$emit("uni-id-pages-login-success");
+      if (config.setPasswordAfterLogin && !passwordConfirmed) {
+        return uni.redirectTo({
+          url: uniIdRedirectUrl ? `/uni_modules/uni-id-pages/pages/userinfo/set-pwd/set-pwd?uniIdRedirectUrl=${uniIdRedirectUrl}&loginType=${e.loginType}` : `/uni_modules/uni-id-pages/pages/userinfo/set-pwd/set-pwd?loginType=${e.loginType}`,
+          fail: (err2) => {
+            formatAppLog("log", "at uni_modules/uni-id-pages/common/store.js:153", err2);
+          }
+        });
+      }
+      if (autoBack) {
+        this.loginBack({ uniIdRedirectUrl });
+      }
+    }
+  };
+  const store = vue.reactive(data);
+  const mixin = {
+    data() {
+      return {
+        config,
+        uniIdRedirectUrl: "",
+        isMounted: false
+      };
+    },
+    onUnload() {
+    },
+    mounted() {
+      this.isMounted = true;
+    },
+    onLoad(e) {
+      if (e.is_weixin_redirect) {
+        if (window.location.href.includes("#")) {
+          const paramsArr = window.location.href.split("?")[1].split("&");
+          paramsArr.forEach((item) => {
+            const arr = item.split("=");
+            if (arr[0] == "code") {
+              e.code = arr[1];
+            }
+          });
+        }
+        this.$nextTick((n2) => {
+          this.$refs.uniFabLogin.login({
+            code: e.code
+          }, "weixin");
+        });
+      }
+      if (e.uniIdRedirectUrl) {
+        this.uniIdRedirectUrl = decodeURIComponent(e.uniIdRedirectUrl);
+      }
+    },
+    computed: {
+      needAgreements() {
+        if (this.isMounted) {
+          if (this.$refs.agreements) {
+            return this.$refs.agreements.needAgreements;
+          } else {
+            return false;
+          }
+        }
+      },
+      agree: {
+        get() {
+          if (this.isMounted) {
+            if (this.$refs.agreements) {
+              return this.$refs.agreements.isAgree;
+            } else {
+              return true;
+            }
+          }
+        },
+        set(agree) {
+          if (this.$refs.agreements) {
+            this.$refs.agreements.isAgree = agree;
+          } else {
+            formatAppLog("log", "at uni_modules/uni-id-pages/common/login-page.mixin.js:78", "不存在 隐私政策协议组件");
+          }
+        }
+      }
+    },
+    methods: {
+      loginSuccess(e) {
+        mutations.loginSuccess({
+          ...e,
+          uniIdRedirectUrl: this.uniIdRedirectUrl
+        });
+      }
+    }
+  };
+  const _imports_0$5 = "/static/logo.png";
+  const _export_sfc = (sfc, props) => {
+    const target = sfc.__vccOpts || sfc;
+    for (const [key, val] of props) {
+      target[key] = val;
+    }
+    return target;
+  };
+  const uniIdCo$a = nr.importObject("uni-id-co", {
+    errorOptions: {
+      type: "toast"
+    }
+  });
+  const _sfc_main$11 = {
+    mixins: [mixin],
+    data() {
+      return {
+        username: "",
+        password: "",
+        focusUsername: false,
+        focusPassword: false,
+        logo: "/static/logo.png",
+        config: {
+          isAdmin: false
+        }
+      };
+    },
+    onLoad() {
+      const tempUsername = uni.getStorageSync("temp_username");
+      const tempPassword = uni.getStorageSync("temp_password");
+      if (tempUsername && tempPassword) {
+        this.username = tempUsername;
+        this.password = tempPassword;
+        uni.removeStorageSync("temp_username");
+        uni.removeStorageSync("temp_password");
+      }
+    },
+    onShow() {
+      this.checkLoginStatus();
+    },
+    methods: {
+      // 检查登录状态
+      // 替换原来的 checkLoginStatus 方法
+      async checkLoginStatus() {
+        const token = uni.getStorageSync("uni_id_token");
+        if (!token)
+          return;
+        try {
+          uni.showToast({
+            title: "检查登录状态...",
+            icon: "none",
+            duration: 1e3
+          });
+          await new Promise((resolve) => setTimeout(resolve, 1e3));
+          uni.showToast({
+            title: "已登录",
+            icon: "success",
+            duration: 2e3
+          });
+          setTimeout(() => {
+            uni.switchTab({
+              url: "/pages/index/index"
+            });
+          }, 2e3);
+        } catch (e) {
+          formatAppLog("log", "at uni_modules/uni-id-pages/pages/login/login-withpwd.vue:118", "检查登录状态出错:", e);
+        }
+      },
+      toRetrievePwd() {
+        uni.showToast({
+          icon: "error",
+          title: "该功能暂未实现"
+        });
+      },
+      async pwdLogin() {
+        if (!this.username.length) {
+          this.focusUsername = true;
+          return uni.showToast({
+            title: "请输入用户名",
+            icon: "none"
+          });
+        }
+        if (!this.password.length) {
+          this.focusPassword = true;
+          return uni.showToast({
+            title: "请输入密码",
+            icon: "none"
+          });
+        }
+        try {
+          uni.showToast({
+            title: "登录中...",
+            icon: "none",
+            duration: 1e3
+          });
+          const data2 = {
+            password: this.password,
+            [/^1\d{10}$/.test(this.username) ? "mobile" : /@/.test(this.username) ? "email" : "username"]: this.username
+          };
+          const e = await uniIdCo$a.login(data2);
+          this.loginSuccess(e);
+          uni.showToast({
+            title: "登录成功",
+            icon: "success",
+            duration: 1500
+          });
+          setTimeout(() => {
+            uni.switchTab({
+              url: "/pages/index/index"
+            });
+          }, 1500);
+        } catch (e) {
+          this.handleLoginError(e);
+        }
+      },
+      toRegister() {
+        uni.navigateTo({
+          url: this.config.isAdmin ? "/uni_modules/uni-id-pages/pages/register/register-admin" : "/uni_modules/uni-id-pages/pages/register/register",
+          fail(e) {
+            formatAppLog("error", "at uni_modules/uni-id-pages/pages/login/login-withpwd.vue:181", e);
+          }
+        });
+      },
+      handleLoginError(error) {
+        formatAppLog("error", "at uni_modules/uni-id-pages/pages/login/login-withpwd.vue:186", "登录错误:", error);
+        let message = "登录失败，请重试";
+        if (error.errCode === "uni-id-account-not-exists") {
+          message = "账号不存在";
+        } else if (error.errCode === "uni-id-password-error") {
+          message = "密码错误";
+        } else if (error.message) {
+          message = error.message;
+        }
+        uni.showToast({
+          title: message,
+          icon: "none"
+        });
+      }
+    }
+  };
+  function _sfc_render$10(_ctx, _cache, $props, $setup, $data, $options) {
+    return vue.openBlock(), vue.createElementBlock("view", { class: "login-container" }, [
+      vue.createElementVNode("view", { class: "login-bg" }),
+      vue.createElementVNode("view", { class: "login-content" }, [
+        vue.createElementVNode("view", { class: "login-logo" }, [
+          vue.createElementVNode("image", {
+            src: _imports_0$5,
+            mode: "widthFix",
+            class: "logo-image"
+          })
+        ]),
+        vue.createElementVNode("view", { class: "form-container" }, [
+          vue.createElementVNode("view", { class: "form-item" }, [
+            vue.withDirectives(vue.createElementVNode("input", {
+              class: "input-box username-input",
+              placeholder: "请输入用户名",
+              "onUpdate:modelValue": _cache[0] || (_cache[0] = ($event) => $data.username = $event),
+              onFocus: _cache[1] || (_cache[1] = ($event) => $data.focusUsername = true),
+              onBlur: _cache[2] || (_cache[2] = ($event) => $data.focusUsername = false),
+              focus: $data.focusUsername
+            }, null, 40, ["focus"]), [
+              [vue.vModelText, $data.username]
+            ])
+          ]),
+          vue.createElementVNode("view", { class: "form-item" }, [
+            vue.withDirectives(vue.createElementVNode("input", {
+              class: "input-box password-input",
+              type: "password",
+              placeholder: "请输入密码",
+              "onUpdate:modelValue": _cache[3] || (_cache[3] = ($event) => $data.password = $event),
+              onFocus: _cache[4] || (_cache[4] = ($event) => $data.focusPassword = true),
+              onBlur: _cache[5] || (_cache[5] = ($event) => $data.focusPassword = false),
+              focus: $data.focusPassword
+            }, null, 40, ["focus"]), [
+              [vue.vModelText, $data.password]
+            ])
+          ])
+        ]),
+        vue.createElementVNode("button", {
+          class: "login-button",
+          type: "primary",
+          onClick: _cache[6] || (_cache[6] = (...args) => $options.pwdLogin && $options.pwdLogin(...args))
+        }, "登录"),
+        vue.createElementVNode("view", { class: "link-container" }, [
+          !$data.config.isAdmin ? (vue.openBlock(), vue.createElementBlock("view", { key: 0 }, [
+            vue.createElementVNode("text", {
+              class: "link-text retrieve-pwd",
+              onClick: _cache[7] || (_cache[7] = (...args) => $options.toRetrievePwd && $options.toRetrievePwd(...args))
+            }, "忘记密码")
+          ])) : vue.createCommentVNode("v-if", true),
+          vue.createElementVNode(
+            "text",
+            {
+              class: "link-text register",
+              onClick: _cache[8] || (_cache[8] = (...args) => $options.toRegister && $options.toRegister(...args))
+            },
+            vue.toDisplayString($data.config.isAdmin ? "注册管理员账号" : "注册账号"),
+            1
+            /* TEXT */
+          )
+        ])
+      ])
+    ]);
+  }
+  const UniModulesUniIdPagesPagesLoginLoginWithpwd = /* @__PURE__ */ _export_sfc(_sfc_main$11, [["render", _sfc_render$10], ["__file", "G:/mobile application development/pdd/uni_modules/uni-id-pages/pages/login/login-withpwd.vue"]]);
+  const _imports_1$5 = "/static/search.png";
+  const _imports_2$5 = "/static/camera.png";
+  const _imports_2$4 = "/static/refresh-loading.gif";
+  const _sfc_main$10 = {
+    data() {
+      return {
+        currentTab: 0,
+        searchPlaceholder: "请输入商品信息",
+        categories: [],
+        allGoods: [],
+        currentTabData: [],
+        placeholderProducts: [],
+        specialItems: [
+          {
+            image: "/static/clock.png",
+            text: "限时秒杀",
+            url: "https://www.jd.com/"
+          },
+          {
+            image: "/static/recharge.png",
+            text: "话费充值",
+            url: "https://pro.jd.com/mall/active/4NgfTXqfdYhvRcmET8SMGCrRztHU/index.html?babelChannel=ttt12&innerAnchor=100119111653"
+          },
+          {
+            image: "/static/turntable.png",
+            text: "数码国补",
+            url: "https://pro.jd.com/mall/active/h7bbR7sFxP6thFYwDqxNWjAbh8K/index.html?babelChannel=ttt111"
+          },
+          {
+            image: "/static/sale.png",
+            text: "秒杀",
+            url: "https://pro.jd.com/mall/active/2hZ8idqu6mj9ZGR1LbPsd3MrW2i2/index.html?babelChannel=ttt3&innerAnchor=10136238481040"
+          },
+          {
+            image: "/static/money.png",
+            text: "便宜包邮",
+            url: "https://pro.jd.com/mall/active/3J13cRc4KPMNqXPVuVFY9aDKsBJy/index.html?babelChannel=ttt1"
+          }
+        ],
+        sections: [
+          {
+            title: "百亿补贴",
+            image: "/static/subsidy.png",
+            url: "/pages/subsidy/subsidy"
+          },
+          {
+            title: "多多买菜",
+            image: "/static/vegetables.png",
+            url: "/pages/buy-vegetables/buy-vegetables"
+          }
+        ],
+        pageNumber: 1,
+        pageSize: 100,
+        scrollHeight: "calc(100vh - 240rpx)",
+        isRefreshing: false,
+        cacheKey: "homePageData",
+        cacheExpiration: 5 * 60 * 1e6,
+        // 5分钟
+        userInfoChecked: false,
+        userInfoComplete: false,
+        // 新增：标记用户信息是否完整
+        isDataLoaded: false
+        // 新增：标记数据是否已加载
+      };
+    },
+    async onLoad() {
+      uni.getSystemInfo({
+        success: (res) => {
+          this.scrollHeight = `calc(100vh - ${res.statusBarHeight}px - 240rpx)`;
+        }
+      });
+      await this.checkUserInfoSync();
+      await this.getInitialData();
+    },
+    onShow() {
+      if (this.userInfoChecked && !this.userInfoComplete) {
+        this.checkUserInfo(true);
+      }
+    },
+    methods: {
+      // 新增：同步检查用户信息的方法
+      async checkUserInfoSync() {
+        formatAppLog("log", "at pages/index/index.vue:165", "开始同步检查用户信息");
+        if (!store.hasLogin) {
+          formatAppLog("log", "at pages/index/index.vue:169", "用户未登录，跳过信息检查");
+          this.userInfoChecked = true;
+          return;
+        }
+        let attempts = 0;
+        const maxAttempts = 20;
+        const waitTime = 2e3;
+        while (!store.userInfo && attempts < maxAttempts) {
+          formatAppLog("log", "at pages/index/index.vue:180", `等待用户信息加载，尝试 ${attempts + 1}/${maxAttempts}`);
+          await new Promise((resolve) => setTimeout(resolve, waitTime));
+          attempts++;
+        }
+        this.userInfoChecked = true;
+        if (!store.userInfo) {
+          formatAppLog("log", "at pages/index/index.vue:189", "用户信息加载超时或不存在");
+          this.userInfoComplete = false;
+          return;
+        }
+        formatAppLog("log", "at pages/index/index.vue:194", "检查用户信息:", store.userInfo);
+        const hasMobile = !!store.userInfo.mobile && store.userInfo.mobile.trim() !== "";
+        const hasAddress = !!store.userInfo.address && store.userInfo.address.trim() !== "";
+        formatAppLog("log", "at pages/index/index.vue:199", "用户信息检查结果:", {
+          hasMobile,
+          hasAddress
+        });
+        this.userInfoComplete = hasMobile && hasAddress;
+        if (!this.userInfoComplete) {
+          formatAppLog("log", "at pages/index/index.vue:207", "用户信息不完整，需要补充");
+          uni.showToast({
+            title: "请完善手机与收货地址",
+            icon: "none",
+            duration: 2e3
+          });
+          setTimeout(() => {
+            uni.navigateTo({
+              url: "/pages/user/set"
+            });
+          }, 2e3);
+        } else {
+          formatAppLog("log", "at pages/index/index.vue:221", "用户信息已完整");
+        }
+      },
+      // 保留原有方法，但主要用于onShow时的检查
+      checkUserInfo(silent = false) {
+        if (!store.hasLogin) {
+          formatAppLog("log", "at pages/index/index.vue:229", "用户未登录，跳过信息检查");
+          return;
+        }
+        const userInfo = store.userInfo;
+        if (!userInfo) {
+          formatAppLog("log", "at pages/index/index.vue:235", "用户信息不存在，跳过信息检查");
+          return;
+        }
+        formatAppLog("log", "at pages/index/index.vue:239", "检查用户信息:", JSON.stringify(userInfo));
+        const hasMobile = !!userInfo.mobile && userInfo.mobile.trim() !== "";
+        const hasAddress = !!userInfo.address && userInfo.address.trim() !== "";
+        formatAppLog("log", "at pages/index/index.vue:244", "用户信息检查结果:", {
+          hasMobile,
+          hasAddress
+        });
+        this.userInfoComplete = hasMobile && hasAddress;
+        if (this.userInfoComplete) {
+          formatAppLog("log", "at pages/index/index.vue:252", "用户信息已完整");
+          return true;
+        } else {
+          formatAppLog("log", "at pages/index/index.vue:255", "用户信息不完整，需要补充");
+          if (!silent) {
+            uni.showToast({
+              title: "请完善手机与收货地址",
+              icon: "none",
+              duration: 2e3
+            });
+            setTimeout(() => {
+              uni.navigateTo({
+                url: "/pages/user/set"
+              });
+            }, 2e3);
+          }
+          return false;
+        }
+      },
+      async getInitialData() {
+        try {
+          const cachedData = this.getCachedData();
+          if (cachedData) {
+            this.setPageData(cachedData);
+          } else {
+            await this.fetchAndCacheData();
+          }
+          this.switchTab(0);
+          this.isDataLoaded = true;
+        } catch (err2) {
+          formatAppLog("error", "at pages/index/index.vue:286", "初始化数据失败:", err2);
+          this.isDataLoaded = false;
+          throw err2;
+        }
+      },
+      getCachedData() {
+        const cachedData = uni.getStorageSync(this.cacheKey);
+        if (cachedData && Date.now() - cachedData.timestamp < this.cacheExpiration) {
+          return cachedData.data;
+        }
+        return null;
+      },
+      async fetchAndCacheData() {
+        try {
+          const {
+            result
+          } = await nr.callFunction({
+            name: "getHomePageData",
+            data: {
+              pageNumber: this.pageNumber,
+              pageSize: this.pageSize
+            }
+          });
+          if (result.success) {
+            this.setPageData(result.data);
+            this.cacheData(result.data);
+          } else {
+            throw new Error(result.error);
+          }
+        } catch (err2) {
+          formatAppLog("error", "at pages/index/index.vue:317", "获取数据失败:", err2);
+          throw err2;
+        }
+      },
+      setPageData(data2) {
+        this.categories = data2.categories || [];
+        this.allGoods = data2.goods || [];
+        if (this.allGoods.length > 0) {
+          this.searchPlaceholder = this.allGoods[Math.floor(Math.random() * this.allGoods.length)].keywords || "请输入商品信息";
+        }
+      },
+      cacheData(data2) {
+        uni.setStorageSync(this.cacheKey, {
+          timestamp: Date.now(),
+          data: data2
+        });
+      },
+      switchTab(index) {
+        this.currentTab = index;
+        const currentCategory = this.categories[index];
+        if (!currentCategory)
+          return;
+        if (index === 0) {
+          const shuffledGoods = [...this.allGoods].sort(() => Math.random() - 0.5);
+          this.currentTabData = shuffledGoods.slice(0, this.pageSize);
+          this.placeholderProducts = shuffledGoods.slice(this.pageSize - 80, this.pageSize + 5);
+        } else {
+          this.currentTabData = this.allGoods.filter((item) => parseInt(item.category_id) === parseInt(
+            currentCategory.sort
+          ));
+        }
+      },
+      navigateToSearch() {
+        uni.navigateTo({
+          url: "/pages/search/search"
+        });
+      },
+      navigateToPage(url) {
+        try {
+          if (false)
+            ;
+          else {
+            uni.navigateTo({
+              url: `/pages/webview/webview?url=${encodeURIComponent(url)}`
+            });
+          }
+        } catch (error) {
+          formatAppLog("error", "at pages/index/index.vue:366", "跳转失败:", error);
+        }
+      },
+      navigateToSection(index) {
+        const section = this.sections[index];
+        if (section) {
+          uni.navigateTo({
+            url: section.url
+          });
+        }
+      },
+      navigateToProduct(item) {
+        if (!item)
+          return;
+        uni.setStorage({
+          key: "currentProduct",
+          data: item,
+          success: () => {
+            formatAppLog("log", "at pages/index/index.vue:384", "商品信息存储成功", item);
+          }
+        });
+        uni.navigateTo({
+          url: "../search/mall-details"
+        });
+      },
+      onRefresh() {
+        formatAppLog("log", "at pages/index/index.vue:393", "正在刷新...");
+        this.isRefreshing = true;
+        this.fetchAndCacheData().then(() => {
+          this.switchTab(this.currentTab);
+          this.isRefreshing = false;
+        }).catch((error) => {
+          formatAppLog("error", "at pages/index/index.vue:399", "刷新失败:", error);
+          this.isRefreshing = false;
+        });
+      }
+    }
+  };
+  function _sfc_render$$(_ctx, _cache, $props, $setup, $data, $options) {
+    return vue.openBlock(), vue.createElementBlock("view", { class: "container" }, [
+      vue.createCommentVNode(" Fixed head section remains unchanged "),
+      vue.createElementVNode("view", { class: "fixed-head" }, [
+        vue.createElementVNode("view", { class: "search-container" }, [
+          vue.createElementVNode("view", {
+            class: "search-box",
+            onClick: _cache[0] || (_cache[0] = (...args) => $options.navigateToSearch && $options.navigateToSearch(...args))
+          }, [
+            vue.createElementVNode("image", {
+              class: "search-icon",
+              src: _imports_1$5,
+              mode: "aspectFit"
+            }),
+            vue.createElementVNode("input", {
+              class: "search-input",
+              type: "text",
+              placeholder: $data.searchPlaceholder
+            }, null, 8, ["placeholder"]),
+            vue.createElementVNode("image", {
+              class: "search-icon",
+              src: _imports_2$5,
+              mode: "aspectFit"
+            })
+          ])
+        ]),
+        vue.createElementVNode("view", { class: "tab-container" }, [
+          (vue.openBlock(true), vue.createElementBlock(
+            vue.Fragment,
+            null,
+            vue.renderList($data.categories, (tab, index) => {
+              return vue.openBlock(), vue.createElementBlock("view", {
+                key: index,
+                class: vue.normalizeClass(["tab-item", { active: $data.currentTab === index }]),
+                onClick: ($event) => $options.switchTab(index)
+              }, vue.toDisplayString(tab.name), 11, ["onClick"]);
+            }),
+            128
+            /* KEYED_FRAGMENT */
+          ))
+        ])
+      ]),
+      vue.createElementVNode("scroll-view", {
+        "scroll-y": "",
+        class: "scroll-container",
+        style: vue.normalizeStyle({ height: $data.scrollHeight }),
+        onRefresherrefresh: _cache[1] || (_cache[1] = (...args) => $options.onRefresh && $options.onRefresh(...args)),
+        "refresher-enabled": "true",
+        "refresher-threshold": 100,
+        "refresher-default-style": "none",
+        "refresher-triggered": $data.isRefreshing,
+        "refresher-background": "transparent"
+      }, [
+        vue.createCommentVNode(" 在这里添加你的刷新动画 "),
+        $data.isRefreshing ? (vue.openBlock(), vue.createElementBlock("view", {
+          key: 0,
+          class: "refresh-container"
+        }, [
+          vue.createElementVNode("image", {
+            class: "refresh-icon",
+            src: _imports_2$4,
+            mode: "aspectFit"
+          }),
+          vue.createElementVNode("text", { class: "refresh-text" }, "正在刷新...")
+        ])) : vue.createCommentVNode("v-if", true),
+        $data.currentTab === 0 ? (vue.openBlock(), vue.createElementBlock(
+          vue.Fragment,
+          { key: 1 },
+          [
+            vue.createElementVNode("view", { class: "section-new" }, [
+              (vue.openBlock(true), vue.createElementBlock(
+                vue.Fragment,
+                null,
+                vue.renderList($data.specialItems, (item, index) => {
+                  return vue.openBlock(), vue.createElementBlock("view", {
+                    key: index,
+                    class: "common-item",
+                    onClick: ($event) => $options.navigateToPage(item.url)
+                  }, [
+                    vue.createElementVNode("image", {
+                      class: "section-image",
+                      src: item.image,
+                      mode: "aspectFit",
+                      "lazy-load": true
+                    }, null, 8, ["src"]),
+                    vue.createElementVNode(
+                      "text",
+                      { class: "section-text" },
+                      vue.toDisplayString(item.text),
+                      1
+                      /* TEXT */
+                    )
+                  ], 8, ["onClick"]);
+                }),
+                128
+                /* KEYED_FRAGMENT */
+              ))
+            ]),
+            (vue.openBlock(true), vue.createElementBlock(
+              vue.Fragment,
+              null,
+              vue.renderList($data.sections, (sectionData, sectionIndex) => {
+                return vue.openBlock(), vue.createElementBlock("view", {
+                  key: sectionIndex,
+                  class: "section",
+                  onClick: ($event) => $options.navigateToSection(sectionIndex)
+                }, [
+                  vue.createElementVNode("view", { class: "common-item" }, [
+                    vue.createElementVNode("image", {
+                      class: "section-image",
+                      src: sectionData.image,
+                      mode: "aspectFit",
+                      "lazy-load": true
+                    }, null, 8, ["src"]),
+                    vue.createElementVNode(
+                      "text",
+                      { class: "section-text-new" },
+                      vue.toDisplayString(sectionData.title),
+                      1
+                      /* TEXT */
+                    )
+                  ]),
+                  (vue.openBlock(true), vue.createElementBlock(
+                    vue.Fragment,
+                    null,
+                    vue.renderList($data.placeholderProducts.slice(sectionIndex * 4, (sectionIndex + 1) * 4), (product, productIndex) => {
+                      var _a;
+                      return vue.openBlock(), vue.createElementBlock("view", {
+                        key: productIndex,
+                        class: "common-item"
+                      }, [
+                        vue.createElementVNode("image", {
+                          class: "section-image",
+                          src: (_a = product.goods_thumb) == null ? void 0 : _a.fileID,
+                          mode: "aspectFit",
+                          "lazy-load": true
+                        }, null, 8, ["src"]),
+                        vue.createElementVNode(
+                          "text",
+                          {
+                            class: "price",
+                            style: { "color": "red" }
+                          },
+                          "¥" + vue.toDisplayString(product.price),
+                          1
+                          /* TEXT */
+                        )
+                      ]);
+                    }),
+                    128
+                    /* KEYED_FRAGMENT */
+                  ))
+                ], 8, ["onClick"]);
+              }),
+              128
+              /* KEYED_FRAGMENT */
+            ))
+          ],
+          64
+          /* STABLE_FRAGMENT */
+        )) : vue.createCommentVNode("v-if", true),
+        vue.createElementVNode("view", { class: "content" }, [
+          $data.currentTab !== null ? (vue.openBlock(), vue.createElementBlock("view", {
+            key: 0,
+            class: "tab-content"
+          }, [
+            (vue.openBlock(true), vue.createElementBlock(
+              vue.Fragment,
+              null,
+              vue.renderList($data.currentTabData, (item, index) => {
+                var _a;
+                return vue.openBlock(), vue.createElementBlock("view", {
+                  key: index,
+                  class: "content-item",
+                  onClick: ($event) => $options.navigateToProduct(item)
+                }, [
+                  vue.createElementVNode("view", { class: "product-card" }, [
+                    vue.createElementVNode("image", {
+                      class: "item-image",
+                      src: (_a = item.goods_thumb) == null ? void 0 : _a.fileID,
+                      mode: "aspectFit",
+                      "lazy-load": true
+                    }, null, 8, ["src"]),
+                    vue.createElementVNode("view", { class: "product-info" }, [
+                      vue.createElementVNode(
+                        "text",
+                        { class: "item-title" },
+                        vue.toDisplayString(item.name),
+                        1
+                        /* TEXT */
+                      ),
+                      vue.createElementVNode("view", { class: "service-tags" }, [
+                        vue.createElementVNode("text", { class: "tag pay-later" }, "先用后付"),
+                        vue.createElementVNode("text", { class: "tag quick-refund" }, "极速退款")
+                      ]),
+                      vue.createElementVNode("view", { class: "price-row" }, [
+                        vue.createElementVNode(
+                          "text",
+                          { class: "price" },
+                          "¥" + vue.toDisplayString(item.price),
+                          1
+                          /* TEXT */
+                        ),
+                        vue.createElementVNode(
+                          "text",
+                          { class: "sales" },
+                          "全店已拼" + vue.toDisplayString(item.total_sell_count) + "+件",
+                          1
+                          /* TEXT */
+                        )
+                      ])
+                    ])
+                  ])
+                ], 8, ["onClick"]);
+              }),
+              128
+              /* KEYED_FRAGMENT */
+            ))
+          ])) : (vue.openBlock(), vue.createElementBlock("view", {
+            key: 1,
+            class: "loading"
+          }, "加载中..."))
+        ])
+      ], 44, ["refresher-triggered"])
+    ]);
+  }
+  const PagesIndexIndex = /* @__PURE__ */ _export_sfc(_sfc_main$10, [["render", _sfc_render$$], ["__scopeId", "data-v-1cf27b2a"], ["__file", "G:/mobile application development/pdd/pages/index/index.vue"]]);
+  const { passwordStrength } = config;
+  const passwordRules = {
+    // 密码必须为6-14位数字、字母和特殊符号的组合
+    medium: /^(?![\u4e00-\u9fa5]+)[0-9a-zA-Z~!@#$%^&*_\-+=`|\\(){}[\]:;"'<>,.?/]{6,14}$/
+  };
+  const ERROR = {
+    normal: {
+      noPwd: "请输入密码",
+      noRePwd: "再次输入密码",
+      rePwdErr: "两次输入密码不一致"
+    },
+    passwordStrengthError: {
+      medium: "密码必须为6-14位数字、字母和特殊符号的组合，不能包含中文"
+    }
+  };
+  function validPwd(password) {
+    if (passwordStrength && passwordRules[passwordStrength]) {
+      if (!new RegExp(passwordRules[passwordStrength]).test(password)) {
+        return ERROR.passwordStrengthError[passwordStrength];
+      }
+    }
+    return true;
+  }
+  function getPwdRules(pwdName = "password", rePwdName = "password2") {
+    const rules2 = {};
+    rules2[pwdName] = {
+      rules: [
+        {
+          required: true,
+          errorMessage: ERROR.normal.noPwd
+        },
+        {
+          validateFunction: function(rule, value, data2, callback) {
+            const checkRes = validPwd(value);
+            if (checkRes !== true) {
+              callback(checkRes);
+            }
+            return true;
+          }
+        }
+      ]
+    };
+    if (rePwdName) {
+      rules2[rePwdName] = {
+        rules: [
+          {
+            required: true,
+            errorMessage: ERROR.normal.noRePwd
+          },
+          {
+            validateFunction: function(rule, value, data2, callback) {
+              if (value != data2[pwdName]) {
+                callback(ERROR.normal.rePwdErr);
+              }
+              return true;
+            }
+          }
+        ]
+      };
+    }
+    return rules2;
+  }
+  const passwordMod = {
+    ERROR,
+    validPwd,
+    getPwdRules
+  };
+  const rules = {
+    "username": {
+      "rules": [
+        {
+          required: true,
+          errorMessage: "请输入用户名"
+        },
+        {
+          minLength: 2,
+          maxLength: 14,
+          errorMessage: "用户名长度在 {minLength} 到 {maxLength} 个字符"
+        },
+        {
+          validateFunction: function(rule, value, data2, callback) {
+            if (/[\u4E00-\u9FA5\uF900-\uFA2D]/.test(value)) {
+              callback("用户名不能包含中文");
+            }
+            return true;
+          }
+        }
+      ],
+      "label": "用户名"
+    },
+    "password": {
+      "rules": [
+        {
+          required: true,
+          errorMessage: "请输入密码"
+        },
+        {
+          minLength: 6,
+          maxLength: 20,
+          errorMessage: "密码长度在 {minLength} 到 {maxLength} 个字符"
+        },
+        {
+          validateFunction: function(rule, value, data2, callback) {
+            if (/[\u4E00-\u9FA5\uF900-\uFA2D]/.test(value)) {
+              callback("密码不能包含中文");
+            }
+            return true;
+          }
+        }
+      ],
+      "label": "密码"
+    },
+    "password2": {
+      "rules": [
+        {
+          required: true,
+          errorMessage: "请再次输入密码"
+        },
+        {
+          minLength: 6,
+          maxLength: 20,
+          errorMessage: "密码长度在 {minLength} 到 {maxLength} 个字符"
+        },
+        {
+          validateFunction: function(rule, value, data2, callback) {
+            if (/[\u4E00-\u9FA5\uF900-\uFA2D]/.test(value)) {
+              callback("密码不能包含中文");
+            }
+            if (value !== data2.password) {
+              callback("两次输入的密码不一致");
+            }
+            return true;
+          }
+        }
+      ],
+      "label": "确认密码"
+    }
+  };
+  const uniIdCo$9 = nr.importObject("uni-id-co");
+  const _sfc_main$$ = {
+    mixins: [mixin],
+    data() {
+      return {
+        formData: {
+          username: "",
+          password: "",
+          password2: ""
+        },
+        rules,
+        focusUsername: false,
+        focusPassword: false,
+        focusPassword2: false,
+        logo: "/static/logo.png"
+      };
+    },
+    onShow() {
+    },
+    methods: {
+      submit() {
+        if (!this.formData.username) {
+          this.focusUsername = true;
+          return uni.showToast({
+            title: "请输入用户名",
+            icon: "none"
+          });
+        }
+        if (!this.formData.password) {
+          this.focusPassword = true;
+          return uni.showToast({
+            title: "请输入密码",
+            icon: "none"
+          });
+        }
+        if (this.formData.password.length < 6) {
+          this.focusPassword = true;
+          return uni.showToast({
+            title: "密码长度不能少于6位",
+            icon: "none"
+          });
+        }
+        if (!this.formData.password2) {
+          this.focusPassword2 = true;
+          return uni.showToast({
+            title: "请再次输入密码",
+            icon: "none"
+          });
+        }
+        if (this.formData.password !== this.formData.password2) {
+          this.focusPassword2 = true;
+          return uni.showToast({
+            title: "两次输入的密码不一致",
+            icon: "none"
+          });
+        }
+        this.submitForm();
+      },
+      submitForm() {
+        uniIdCo$9.registerUser(this.formData).then((e) => {
+          this.loginSuccess(e);
+          uni.showToast({
+            title: "注册成功",
+            icon: "success",
+            duration: 2e3
+          });
+          uni.setStorageSync("temp_username", this.formData.username);
+          uni.setStorageSync("temp_password", this.formData.password);
+          setTimeout(() => {
+            uni.redirectTo({
+              url: "/uni_modules/uni-id-pages/pages/login/login-withpwd"
+            });
+          }, 2e3);
+        }).catch((e) => {
+          formatAppLog("error", "at uni_modules/uni-id-pages/pages/register/register.vue:147", "注册失败：", e);
+          let errorMessage = "注册失败，请重试";
+          if (e.msg) {
+            errorMessage = e.msg;
+          }
+          uni.showToast({
+            title: errorMessage,
+            icon: "none",
+            duration: 3e3
+          });
+        });
+      },
+      navigateBack() {
+        uni.navigateBack();
+      },
+      toLogin() {
+        uni.navigateTo({
+          url: "/uni_modules/uni-id-pages/pages/login/login-withpwd"
+        });
+      },
+      registerByEmail() {
+        uni.navigateTo({
+          url: "/uni_modules/uni-id-pages/pages/register/register-by-email"
+        });
+      }
+    }
+  };
+  function _sfc_render$_(_ctx, _cache, $props, $setup, $data, $options) {
+    return vue.openBlock(), vue.createElementBlock("view", { class: "login-container" }, [
+      vue.createElementVNode("view", { class: "login-bg" }),
+      vue.createElementVNode("view", { class: "login-content" }, [
+        vue.createElementVNode("view", { class: "login-logo" }, [
+          vue.createElementVNode("image", {
+            src: _imports_0$5,
+            mode: "widthFix",
+            class: "logo-image"
+          })
+        ]),
+        vue.createElementVNode("view", { class: "form-container" }, [
+          vue.createElementVNode("view", { class: "form-item" }, [
+            vue.withDirectives(vue.createElementVNode("input", {
+              class: "input-box username-input",
+              placeholder: "请输入用户名",
+              "onUpdate:modelValue": _cache[0] || (_cache[0] = ($event) => $data.formData.username = $event),
+              onFocus: _cache[1] || (_cache[1] = ($event) => $data.focusUsername = true),
+              onBlur: _cache[2] || (_cache[2] = ($event) => $data.focusUsername = false),
+              focus: $data.focusUsername
+            }, null, 40, ["focus"]), [
+              [vue.vModelText, $data.formData.username]
+            ])
+          ]),
+          vue.createElementVNode("view", { class: "form-item" }, [
+            vue.withDirectives(vue.createElementVNode("input", {
+              class: "input-box password-input",
+              maxlength: "20",
+              placeholder: "请输入6-20位密码",
+              type: "password",
+              "onUpdate:modelValue": _cache[3] || (_cache[3] = ($event) => $data.formData.password = $event),
+              onFocus: _cache[4] || (_cache[4] = ($event) => $data.focusPassword = true),
+              onBlur: _cache[5] || (_cache[5] = ($event) => $data.focusPassword = false),
+              focus: $data.focusPassword
+            }, null, 40, ["focus"]), [
+              [vue.vModelText, $data.formData.password]
+            ])
+          ]),
+          vue.createElementVNode("view", { class: "form-item" }, [
+            vue.withDirectives(vue.createElementVNode("input", {
+              class: "input-box password-input",
+              maxlength: "20",
+              placeholder: "再次输入密码",
+              type: "password",
+              "onUpdate:modelValue": _cache[6] || (_cache[6] = ($event) => $data.formData.password2 = $event),
+              onFocus: _cache[7] || (_cache[7] = ($event) => $data.focusPassword2 = true),
+              onBlur: _cache[8] || (_cache[8] = ($event) => $data.focusPassword2 = false),
+              focus: $data.focusPassword2
+            }, null, 40, ["focus"]), [
+              [vue.vModelText, $data.formData.password2]
+            ])
+          ]),
+          vue.createElementVNode("button", {
+            class: "login-button",
+            type: "primary",
+            onClick: _cache[9] || (_cache[9] = (...args) => $options.submit && $options.submit(...args))
+          }, "注册"),
+          vue.createElementVNode("button", {
+            class: "register-back",
+            onClick: _cache[10] || (_cache[10] = (...args) => $options.navigateBack && $options.navigateBack(...args))
+          }, "返回")
+        ])
+      ])
+    ]);
+  }
+  const UniModulesUniIdPagesPagesRegisterRegister = /* @__PURE__ */ _export_sfc(_sfc_main$$, [["render", _sfc_render$_], ["__file", "G:/mobile application development/pdd/uni_modules/uni-id-pages/pages/register/register.vue"]]);
+  const popup = {
+    data() {
+      return {};
+    },
+    created() {
+      this.popup = this.getParent();
+    },
+    methods: {
+      /**
+       * 获取父元素实例
+       */
+      getParent(name = "uniPopup") {
+        let parent = this.$parent;
+        let parentName = parent.$options.name;
+        while (parentName !== name) {
+          parent = parent.$parent;
+          if (!parent)
+            return false;
+          parentName = parent.$options.name;
+        }
+        return parent;
+      }
+    }
+  };
+  const isObject = (val) => val !== null && typeof val === "object";
+  const defaultDelimiters = ["{", "}"];
+  class BaseFormatter {
+    constructor() {
+      this._caches = /* @__PURE__ */ Object.create(null);
+    }
+    interpolate(message, values, delimiters = defaultDelimiters) {
+      if (!values) {
+        return [message];
+      }
+      let tokens = this._caches[message];
+      if (!tokens) {
+        tokens = parse(message, delimiters);
+        this._caches[message] = tokens;
+      }
+      return compile(tokens, values);
+    }
+  }
+  const RE_TOKEN_LIST_VALUE = /^(?:\d)+/;
+  const RE_TOKEN_NAMED_VALUE = /^(?:\w)+/;
+  function parse(format, [startDelimiter, endDelimiter]) {
+    const tokens = [];
+    let position = 0;
+    let text = "";
+    while (position < format.length) {
+      let char = format[position++];
+      if (char === startDelimiter) {
+        if (text) {
+          tokens.push({ type: "text", value: text });
+        }
+        text = "";
+        let sub = "";
+        char = format[position++];
+        while (char !== void 0 && char !== endDelimiter) {
+          sub += char;
+          char = format[position++];
+        }
+        const isClosed = char === endDelimiter;
+        const type = RE_TOKEN_LIST_VALUE.test(sub) ? "list" : isClosed && RE_TOKEN_NAMED_VALUE.test(sub) ? "named" : "unknown";
+        tokens.push({ value: sub, type });
+      } else {
+        text += char;
+      }
+    }
+    text && tokens.push({ type: "text", value: text });
+    return tokens;
+  }
+  function compile(tokens, values) {
+    const compiled = [];
+    let index = 0;
+    const mode = Array.isArray(values) ? "list" : isObject(values) ? "named" : "unknown";
+    if (mode === "unknown") {
+      return compiled;
+    }
+    while (index < tokens.length) {
+      const token = tokens[index];
+      switch (token.type) {
+        case "text":
+          compiled.push(token.value);
+          break;
+        case "list":
+          compiled.push(values[parseInt(token.value, 10)]);
+          break;
+        case "named":
+          if (mode === "named") {
+            compiled.push(values[token.value]);
+          } else {
+            {
+              console.warn(`Type of token '${token.type}' and format of value '${mode}' don't match!`);
+            }
+          }
+          break;
+        case "unknown":
+          {
+            console.warn(`Detect 'unknown' type of token!`);
+          }
+          break;
+      }
+      index++;
+    }
+    return compiled;
+  }
+  const LOCALE_ZH_HANS = "zh-Hans";
+  const LOCALE_ZH_HANT = "zh-Hant";
+  const LOCALE_EN = "en";
+  const LOCALE_FR = "fr";
+  const LOCALE_ES = "es";
+  const hasOwnProperty = Object.prototype.hasOwnProperty;
+  const hasOwn = (val, key) => hasOwnProperty.call(val, key);
+  const defaultFormatter = new BaseFormatter();
+  function include(str, parts) {
+    return !!parts.find((part) => str.indexOf(part) !== -1);
+  }
+  function startsWith(str, parts) {
+    return parts.find((part) => str.indexOf(part) === 0);
+  }
+  function normalizeLocale(locale, messages2) {
+    if (!locale) {
+      return;
+    }
+    locale = locale.trim().replace(/_/g, "-");
+    if (messages2 && messages2[locale]) {
+      return locale;
+    }
+    locale = locale.toLowerCase();
+    if (locale === "chinese") {
+      return LOCALE_ZH_HANS;
+    }
+    if (locale.indexOf("zh") === 0) {
+      if (locale.indexOf("-hans") > -1) {
+        return LOCALE_ZH_HANS;
+      }
+      if (locale.indexOf("-hant") > -1) {
+        return LOCALE_ZH_HANT;
+      }
+      if (include(locale, ["-tw", "-hk", "-mo", "-cht"])) {
+        return LOCALE_ZH_HANT;
+      }
+      return LOCALE_ZH_HANS;
+    }
+    let locales = [LOCALE_EN, LOCALE_FR, LOCALE_ES];
+    if (messages2 && Object.keys(messages2).length > 0) {
+      locales = Object.keys(messages2);
+    }
+    const lang = startsWith(locale, locales);
+    if (lang) {
+      return lang;
+    }
+  }
+  class I18n {
+    constructor({ locale, fallbackLocale, messages: messages2, watcher, formater: formater2 }) {
+      this.locale = LOCALE_EN;
+      this.fallbackLocale = LOCALE_EN;
+      this.message = {};
+      this.messages = {};
+      this.watchers = [];
+      if (fallbackLocale) {
+        this.fallbackLocale = fallbackLocale;
+      }
+      this.formater = formater2 || defaultFormatter;
+      this.messages = messages2 || {};
+      this.setLocale(locale || LOCALE_EN);
+      if (watcher) {
+        this.watchLocale(watcher);
+      }
+    }
+    setLocale(locale) {
+      const oldLocale = this.locale;
+      this.locale = normalizeLocale(locale, this.messages) || this.fallbackLocale;
+      if (!this.messages[this.locale]) {
+        this.messages[this.locale] = {};
+      }
+      this.message = this.messages[this.locale];
+      if (oldLocale !== this.locale) {
+        this.watchers.forEach((watcher) => {
+          watcher(this.locale, oldLocale);
+        });
+      }
+    }
+    getLocale() {
+      return this.locale;
+    }
+    watchLocale(fn) {
+      const index = this.watchers.push(fn) - 1;
+      return () => {
+        this.watchers.splice(index, 1);
+      };
+    }
+    add(locale, message, override = true) {
+      const curMessages = this.messages[locale];
+      if (curMessages) {
+        if (override) {
+          Object.assign(curMessages, message);
+        } else {
+          Object.keys(message).forEach((key) => {
+            if (!hasOwn(curMessages, key)) {
+              curMessages[key] = message[key];
+            }
+          });
+        }
+      } else {
+        this.messages[locale] = message;
+      }
+    }
+    f(message, values, delimiters) {
+      return this.formater.interpolate(message, values, delimiters).join("");
+    }
+    t(key, locale, values) {
+      let message = this.message;
+      if (typeof locale === "string") {
+        locale = normalizeLocale(locale, this.messages);
+        locale && (message = this.messages[locale]);
+      } else {
+        values = locale;
+      }
+      if (!hasOwn(message, key)) {
+        console.warn(`Cannot translate the value of keypath ${key}. Use the value of keypath as default.`);
+        return key;
+      }
+      return this.formater.interpolate(message[key], values).join("");
+    }
+  }
+  function watchAppLocale(appVm, i18n) {
+    if (appVm.$watchLocale) {
+      appVm.$watchLocale((newLocale) => {
+        i18n.setLocale(newLocale);
+      });
+    } else {
+      appVm.$watch(() => appVm.$locale, (newLocale) => {
+        i18n.setLocale(newLocale);
+      });
+    }
+  }
+  function getDefaultLocale() {
+    if (typeof uni !== "undefined" && uni.getLocale) {
+      return uni.getLocale();
+    }
+    if (typeof global !== "undefined" && global.getLocale) {
+      return global.getLocale();
+    }
+    return LOCALE_EN;
+  }
+  function initVueI18n(locale, messages2 = {}, fallbackLocale, watcher) {
+    if (typeof locale !== "string") {
+      const options = [
+        messages2,
+        locale
+      ];
+      locale = options[0];
+      messages2 = options[1];
+    }
+    if (typeof locale !== "string") {
+      locale = getDefaultLocale();
+    }
+    if (typeof fallbackLocale !== "string") {
+      fallbackLocale = typeof __uniConfig !== "undefined" && __uniConfig.fallbackLocale || LOCALE_EN;
+    }
+    const i18n = new I18n({
+      locale,
+      fallbackLocale,
+      messages: messages2,
+      watcher
+    });
+    let t2 = (key, values) => {
+      if (typeof getApp !== "function") {
+        t2 = function(key2, values2) {
+          return i18n.t(key2, values2);
+        };
+      } else {
+        let isWatchedAppLocale = false;
+        t2 = function(key2, values2) {
+          const appVm = getApp().$vm;
+          if (appVm) {
+            appVm.$locale;
+            if (!isWatchedAppLocale) {
+              isWatchedAppLocale = true;
+              watchAppLocale(appVm, i18n);
+            }
+          }
+          return i18n.t(key2, values2);
+        };
+      }
+      return t2(key, values);
+    };
+    return {
+      i18n,
+      f(message, values, delimiters) {
+        return i18n.f(message, values, delimiters);
+      },
+      t(key, values) {
+        return t2(key, values);
+      },
+      add(locale2, message, override = true) {
+        return i18n.add(locale2, message, override);
+      },
+      watch(fn) {
+        return i18n.watchLocale(fn);
+      },
+      getLocale() {
+        return i18n.getLocale();
+      },
+      setLocale(newLocale) {
+        return i18n.setLocale(newLocale);
+      }
+    };
+  }
+  const en$2 = {
+    "uni-popup.cancel": "cancel",
+    "uni-popup.ok": "ok",
+    "uni-popup.placeholder": "pleace enter",
+    "uni-popup.title": "Hint",
+    "uni-popup.shareTitle": "Share to"
+  };
+  const zhHans$2 = {
+    "uni-popup.cancel": "取消",
+    "uni-popup.ok": "确定",
+    "uni-popup.placeholder": "请输入",
+    "uni-popup.title": "提示",
+    "uni-popup.shareTitle": "分享到"
+  };
+  const zhHant$2 = {
+    "uni-popup.cancel": "取消",
+    "uni-popup.ok": "確定",
+    "uni-popup.placeholder": "請輸入",
+    "uni-popup.title": "提示",
+    "uni-popup.shareTitle": "分享到"
+  };
+  const messages$2 = {
+    en: en$2,
+    "zh-Hans": zhHans$2,
+    "zh-Hant": zhHant$2
+  };
+  const {
+    t: t$2
+  } = initVueI18n(messages$2);
+  const _sfc_main$_ = {
+    name: "uniPopupDialog",
+    mixins: [popup],
+    emits: ["confirm", "close", "update:modelValue", "input"],
+    props: {
+      inputType: {
+        type: String,
+        default: "text"
+      },
+      showClose: {
+        type: Boolean,
+        default: true
+      },
+      modelValue: {
+        type: [Number, String],
+        default: ""
+      },
+      placeholder: {
+        type: [String, Number],
+        default: ""
+      },
+      type: {
+        type: String,
+        default: "error"
+      },
+      mode: {
+        type: String,
+        default: "base"
+      },
+      title: {
+        type: String,
+        default: ""
+      },
+      content: {
+        type: String,
+        default: ""
+      },
+      beforeClose: {
+        type: Boolean,
+        default: false
+      },
+      cancelText: {
+        type: String,
+        default: ""
+      },
+      confirmText: {
+        type: String,
+        default: ""
+      },
+      maxlength: {
+        type: Number,
+        default: -1
+      },
+      focus: {
+        type: Boolean,
+        default: true
+      }
+    },
+    data() {
+      return {
+        dialogType: "error",
+        val: ""
+      };
+    },
+    computed: {
+      okText() {
+        return this.confirmText || t$2("uni-popup.ok");
+      },
+      closeText() {
+        return this.cancelText || t$2("uni-popup.cancel");
+      },
+      placeholderText() {
+        return this.placeholder || t$2("uni-popup.placeholder");
+      },
+      titleText() {
+        return this.title || t$2("uni-popup.title");
+      }
+    },
+    watch: {
+      type(val) {
+        this.dialogType = val;
+      },
+      mode(val) {
+        if (val === "input") {
+          this.dialogType = "info";
+        }
+      },
+      value(val) {
+        setVal(val);
+      },
+      modelValue(val) {
+        setVal(val);
+      },
+      val(val) {
+        this.$emit("update:modelValue", val);
+      }
+    },
+    created() {
+      this.popup.disableMask();
+      if (this.mode === "input") {
+        this.dialogType = "info";
+        this.val = this.value;
+        this.val = this.modelValue;
+      } else {
+        this.dialogType = this.type;
+      }
+    },
+    methods: {
+      /**
+       * 给val属性赋值
+       */
+      setVal(val) {
+        if (this.maxlength != -1 && this.mode === "input") {
+          this.val = val.slice(0, this.maxlength);
+        } else {
+          this.val = val;
+        }
+      },
+      /**
+       * 点击确认按钮
+       */
+      onOk() {
+        if (this.mode === "input") {
+          this.$emit("confirm", this.val);
+        } else {
+          this.$emit("confirm");
+        }
+        if (this.beforeClose)
+          return;
+        this.popup.close();
+      },
+      /**
+       * 点击取消按钮
+       */
+      closeDialog() {
+        this.$emit("close");
+        if (this.beforeClose)
+          return;
+        this.popup.close();
+      },
+      close() {
+        this.popup.close();
+      }
+    }
+  };
+  function _sfc_render$Z(_ctx, _cache, $props, $setup, $data, $options) {
+    return vue.openBlock(), vue.createElementBlock("view", { class: "uni-popup-dialog" }, [
+      vue.createElementVNode("view", { class: "uni-dialog-title" }, [
+        vue.createElementVNode(
+          "text",
+          {
+            class: vue.normalizeClass(["uni-dialog-title-text", ["uni-popup__" + $data.dialogType]])
+          },
+          vue.toDisplayString($options.titleText),
+          3
+          /* TEXT, CLASS */
+        )
+      ]),
+      $props.mode === "base" ? (vue.openBlock(), vue.createElementBlock("view", {
+        key: 0,
+        class: "uni-dialog-content"
+      }, [
+        vue.renderSlot(_ctx.$slots, "default", {}, () => [
+          vue.createElementVNode(
+            "text",
+            { class: "uni-dialog-content-text" },
+            vue.toDisplayString($props.content),
+            1
+            /* TEXT */
+          )
+        ], true)
+      ])) : (vue.openBlock(), vue.createElementBlock("view", {
+        key: 1,
+        class: "uni-dialog-content"
+      }, [
+        vue.renderSlot(_ctx.$slots, "default", {}, () => [
+          vue.withDirectives(vue.createElementVNode("input", {
+            class: "uni-dialog-input",
+            maxlength: $props.maxlength,
+            "onUpdate:modelValue": _cache[0] || (_cache[0] = ($event) => $data.val = $event),
+            type: $props.inputType,
+            placeholder: $options.placeholderText,
+            focus: $props.focus
+          }, null, 8, ["maxlength", "type", "placeholder", "focus"]), [
+            [vue.vModelDynamic, $data.val]
+          ])
+        ], true)
+      ])),
+      vue.createElementVNode("view", { class: "uni-dialog-button-group" }, [
+        $props.showClose ? (vue.openBlock(), vue.createElementBlock("view", {
+          key: 0,
+          class: "uni-dialog-button",
+          onClick: _cache[1] || (_cache[1] = (...args) => $options.closeDialog && $options.closeDialog(...args))
+        }, [
+          vue.createElementVNode(
+            "text",
+            { class: "uni-dialog-button-text" },
+            vue.toDisplayString($options.closeText),
+            1
+            /* TEXT */
+          )
+        ])) : vue.createCommentVNode("v-if", true),
+        vue.createElementVNode(
+          "view",
+          {
+            class: vue.normalizeClass(["uni-dialog-button", $props.showClose ? "uni-border-left" : ""]),
+            onClick: _cache[2] || (_cache[2] = (...args) => $options.onOk && $options.onOk(...args))
+          },
+          [
+            vue.createElementVNode(
+              "text",
+              { class: "uni-dialog-button-text uni-button-color" },
+              vue.toDisplayString($options.okText),
+              1
+              /* TEXT */
+            )
+          ],
+          2
+          /* CLASS */
+        )
+      ])
+    ]);
+  }
+  const __easycom_3$5 = /* @__PURE__ */ _export_sfc(_sfc_main$_, [["render", _sfc_render$Z], ["__scopeId", "data-v-d78c88b7"], ["__file", "G:/mobile application development/pdd/uni_modules/uni-popup/components/uni-popup-dialog/uni-popup-dialog.vue"]]);
+  class MPAnimation {
+    constructor(options, _this) {
+      this.options = options;
+      this.animation = uni.createAnimation({
+        ...options
+      });
+      this.currentStepAnimates = {};
+      this.next = 0;
+      this.$ = _this;
+    }
+    _nvuePushAnimates(type, args) {
+      let aniObj = this.currentStepAnimates[this.next];
+      let styles = {};
+      if (!aniObj) {
+        styles = {
+          styles: {},
+          config: {}
+        };
+      } else {
+        styles = aniObj;
+      }
+      if (animateTypes1.includes(type)) {
+        if (!styles.styles.transform) {
+          styles.styles.transform = "";
+        }
+        let unit = "";
+        if (type === "rotate") {
+          unit = "deg";
+        }
+        styles.styles.transform += `${type}(${args + unit}) `;
+      } else {
+        styles.styles[type] = `${args}`;
+      }
+      this.currentStepAnimates[this.next] = styles;
+    }
+    _animateRun(styles = {}, config2 = {}) {
+      let ref = this.$.$refs["ani"].ref;
+      if (!ref)
+        return;
+      return new Promise((resolve, reject) => {
+        nvueAnimation.transition(ref, {
+          styles,
+          ...config2
+        }, (res) => {
+          resolve();
+        });
+      });
+    }
+    _nvueNextAnimate(animates, step = 0, fn) {
+      let obj = animates[step];
+      if (obj) {
+        let {
+          styles,
+          config: config2
+        } = obj;
+        this._animateRun(styles, config2).then(() => {
+          step += 1;
+          this._nvueNextAnimate(animates, step, fn);
+        });
+      } else {
+        this.currentStepAnimates = {};
+        typeof fn === "function" && fn();
+        this.isEnd = true;
+      }
+    }
+    step(config2 = {}) {
+      this.animation.step(config2);
+      return this;
+    }
+    run(fn) {
+      this.$.animationData = this.animation.export();
+      this.$.timer = setTimeout(() => {
+        typeof fn === "function" && fn();
+      }, this.$.durationTime);
+    }
+  }
+  const animateTypes1 = [
+    "matrix",
+    "matrix3d",
+    "rotate",
+    "rotate3d",
+    "rotateX",
+    "rotateY",
+    "rotateZ",
+    "scale",
+    "scale3d",
+    "scaleX",
+    "scaleY",
+    "scaleZ",
+    "skew",
+    "skewX",
+    "skewY",
+    "translate",
+    "translate3d",
+    "translateX",
+    "translateY",
+    "translateZ"
+  ];
+  const animateTypes2 = ["opacity", "backgroundColor"];
+  const animateTypes3 = ["width", "height", "left", "right", "top", "bottom"];
+  animateTypes1.concat(animateTypes2, animateTypes3).forEach((type) => {
+    MPAnimation.prototype[type] = function(...args) {
+      this.animation[type](...args);
+      return this;
+    };
+  });
+  function createAnimation(option, _this) {
+    if (!_this)
+      return;
+    clearTimeout(_this.timer);
+    return new MPAnimation(option, _this);
+  }
+  const _sfc_main$Z = {
+    name: "uniTransition",
+    emits: ["click", "change"],
+    props: {
+      show: {
+        type: Boolean,
+        default: false
+      },
+      modeClass: {
+        type: [Array, String],
+        default() {
+          return "fade";
+        }
+      },
+      duration: {
+        type: Number,
+        default: 300
+      },
+      styles: {
+        type: Object,
+        default() {
+          return {};
+        }
+      },
+      customClass: {
+        type: String,
+        default: ""
+      },
+      onceRender: {
+        type: Boolean,
+        default: false
+      }
+    },
+    data() {
+      return {
+        isShow: false,
+        transform: "",
+        opacity: 1,
+        animationData: {},
+        durationTime: 300,
+        config: {}
+      };
+    },
+    watch: {
+      show: {
+        handler(newVal) {
+          if (newVal) {
+            this.open();
+          } else {
+            if (this.isShow) {
+              this.close();
+            }
+          }
+        },
+        immediate: true
+      }
+    },
+    computed: {
+      // 生成样式数据
+      stylesObject() {
+        let styles = {
+          ...this.styles,
+          "transition-duration": this.duration / 1e3 + "s"
+        };
+        let transform = "";
+        for (let i2 in styles) {
+          let line = this.toLine(i2);
+          transform += line + ":" + styles[i2] + ";";
+        }
+        return transform;
+      },
+      // 初始化动画条件
+      transformStyles() {
+        return "transform:" + this.transform + ";opacity:" + this.opacity + ";" + this.stylesObject;
+      }
+    },
+    created() {
+      this.config = {
+        duration: this.duration,
+        timingFunction: "ease",
+        transformOrigin: "50% 50%",
+        delay: 0
+      };
+      this.durationTime = this.duration;
+    },
+    methods: {
+      /**
+       *  ref 触发 初始化动画
+       */
+      init(obj = {}) {
+        if (obj.duration) {
+          this.durationTime = obj.duration;
+        }
+        this.animation = createAnimation(Object.assign(this.config, obj), this);
+      },
+      /**
+       * 点击组件触发回调
+       */
+      onClick() {
+        this.$emit("click", {
+          detail: this.isShow
+        });
+      },
+      /**
+       * ref 触发 动画分组
+       * @param {Object} obj
+       */
+      step(obj, config2 = {}) {
+        if (!this.animation)
+          return;
+        for (let i2 in obj) {
+          try {
+            if (typeof obj[i2] === "object") {
+              this.animation[i2](...obj[i2]);
+            } else {
+              this.animation[i2](obj[i2]);
+            }
+          } catch (e) {
+            formatAppLog("error", "at uni_modules/uni-transition/components/uni-transition/uni-transition.vue:148", `方法 ${i2} 不存在`);
+          }
+        }
+        this.animation.step(config2);
+        return this;
+      },
+      /**
+       *  ref 触发 执行动画
+       */
+      run(fn) {
+        if (!this.animation)
+          return;
+        this.animation.run(fn);
+      },
+      // 开始过度动画
+      open() {
+        clearTimeout(this.timer);
+        this.transform = "";
+        this.isShow = true;
+        let { opacity, transform } = this.styleInit(false);
+        if (typeof opacity !== "undefined") {
+          this.opacity = opacity;
+        }
+        this.transform = transform;
+        this.$nextTick(() => {
+          this.timer = setTimeout(() => {
+            this.animation = createAnimation(this.config, this);
+            this.tranfromInit(false).step();
+            this.animation.run(() => {
+              this.transform = "";
+              this.opacity = opacity || 1;
+            });
+            this.$emit("change", {
+              detail: this.isShow
+            });
+          }, 20);
+        });
+      },
+      // 关闭过度动画
+      close(type) {
+        if (!this.animation)
+          return;
+        this.tranfromInit(true).step().run(() => {
+          this.isShow = false;
+          this.animationData = null;
+          this.animation = null;
+          let { opacity, transform } = this.styleInit(false);
+          this.opacity = opacity || 1;
+          this.transform = transform;
+          this.$emit("change", {
+            detail: this.isShow
+          });
+        });
+      },
+      // 处理动画开始前的默认样式
+      styleInit(type) {
+        let styles = {
+          transform: ""
+        };
+        let buildStyle = (type2, mode) => {
+          if (mode === "fade") {
+            styles.opacity = this.animationType(type2)[mode];
+          } else {
+            styles.transform += this.animationType(type2)[mode] + " ";
+          }
+        };
+        if (typeof this.modeClass === "string") {
+          buildStyle(type, this.modeClass);
+        } else {
+          this.modeClass.forEach((mode) => {
+            buildStyle(type, mode);
+          });
+        }
+        return styles;
+      },
+      // 处理内置组合动画
+      tranfromInit(type) {
+        let buildTranfrom = (type2, mode) => {
+          let aniNum = null;
+          if (mode === "fade") {
+            aniNum = type2 ? 0 : 1;
+          } else {
+            aniNum = type2 ? "-100%" : "0";
+            if (mode === "zoom-in") {
+              aniNum = type2 ? 0.8 : 1;
+            }
+            if (mode === "zoom-out") {
+              aniNum = type2 ? 1.2 : 1;
+            }
+            if (mode === "slide-right") {
+              aniNum = type2 ? "100%" : "0";
+            }
+            if (mode === "slide-bottom") {
+              aniNum = type2 ? "100%" : "0";
+            }
+          }
+          this.animation[this.animationMode()[mode]](aniNum);
+        };
+        if (typeof this.modeClass === "string") {
+          buildTranfrom(type, this.modeClass);
+        } else {
+          this.modeClass.forEach((mode) => {
+            buildTranfrom(type, mode);
+          });
+        }
+        return this.animation;
+      },
+      animationType(type) {
+        return {
+          fade: type ? 0 : 1,
+          "slide-top": `translateY(${type ? "0" : "-100%"})`,
+          "slide-right": `translateX(${type ? "0" : "100%"})`,
+          "slide-bottom": `translateY(${type ? "0" : "100%"})`,
+          "slide-left": `translateX(${type ? "0" : "-100%"})`,
+          "zoom-in": `scaleX(${type ? 1 : 0.8}) scaleY(${type ? 1 : 0.8})`,
+          "zoom-out": `scaleX(${type ? 1 : 1.2}) scaleY(${type ? 1 : 1.2})`
+        };
+      },
+      // 内置动画类型与实际动画对应字典
+      animationMode() {
+        return {
+          fade: "opacity",
+          "slide-top": "translateY",
+          "slide-right": "translateX",
+          "slide-bottom": "translateY",
+          "slide-left": "translateX",
+          "zoom-in": "scale",
+          "zoom-out": "scale"
+        };
+      },
+      // 驼峰转中横线
+      toLine(name) {
+        return name.replace(/([A-Z])/g, "-$1").toLowerCase();
+      }
+    }
+  };
+  function _sfc_render$Y(_ctx, _cache, $props, $setup, $data, $options) {
+    return vue.withDirectives((vue.openBlock(), vue.createElementBlock("view", {
+      ref: "ani",
+      animation: $data.animationData,
+      class: vue.normalizeClass($props.customClass),
+      style: vue.normalizeStyle($options.transformStyles),
+      onClick: _cache[0] || (_cache[0] = (...args) => $options.onClick && $options.onClick(...args))
+    }, [
+      vue.renderSlot(_ctx.$slots, "default")
+    ], 14, ["animation"])), [
+      [vue.vShow, $data.isShow]
+    ]);
+  }
+  const __easycom_0$9 = /* @__PURE__ */ _export_sfc(_sfc_main$Z, [["render", _sfc_render$Y], ["__file", "G:/mobile application development/pdd/uni_modules/uni-transition/components/uni-transition/uni-transition.vue"]]);
+  const _sfc_main$Y = {
+    name: "uniPopup",
+    components: {},
+    emits: ["change", "maskClick"],
+    props: {
+      // 开启动画
+      animation: {
+        type: Boolean,
+        default: true
+      },
+      // 弹出层类型，可选值，top: 顶部弹出层；bottom：底部弹出层；center：全屏弹出层
+      // message: 消息提示 ; dialog : 对话框
+      type: {
+        type: String,
+        default: "center"
+      },
+      // maskClick
+      isMaskClick: {
+        type: Boolean,
+        default: null
+      },
+      // TODO 2 个版本后废弃属性 ，使用 isMaskClick
+      maskClick: {
+        type: Boolean,
+        default: null
+      },
+      backgroundColor: {
+        type: String,
+        default: "none"
+      },
+      safeArea: {
+        type: Boolean,
+        default: true
+      },
+      maskBackgroundColor: {
+        type: String,
+        default: "rgba(0, 0, 0, 0.4)"
+      },
+      borderRadius: {
+        type: String
+      }
+    },
+    watch: {
+      /**
+       * 监听type类型
+       */
+      type: {
+        handler: function(type) {
+          if (!this.config[type])
+            return;
+          this[this.config[type]](true);
+        },
+        immediate: true
+      },
+      isDesktop: {
+        handler: function(newVal) {
+          if (!this.config[newVal])
+            return;
+          this[this.config[this.type]](true);
+        },
+        immediate: true
+      },
+      /**
+       * 监听遮罩是否可点击
+       * @param {Object} val
+       */
+      maskClick: {
+        handler: function(val) {
+          this.mkclick = val;
+        },
+        immediate: true
+      },
+      isMaskClick: {
+        handler: function(val) {
+          this.mkclick = val;
+        },
+        immediate: true
+      },
+      // H5 下禁止底部滚动
+      showPopup(show) {
+      }
+    },
+    data() {
+      return {
+        duration: 300,
+        ani: [],
+        showPopup: false,
+        showTrans: false,
+        popupWidth: 0,
+        popupHeight: 0,
+        config: {
+          top: "top",
+          bottom: "bottom",
+          center: "center",
+          left: "left",
+          right: "right",
+          message: "top",
+          dialog: "center",
+          share: "bottom"
+        },
+        maskClass: {
+          position: "fixed",
+          bottom: 0,
+          top: 0,
+          left: 0,
+          right: 0,
+          backgroundColor: "rgba(0, 0, 0, 0.4)"
+        },
+        transClass: {
+          backgroundColor: "transparent",
+          borderRadius: this.borderRadius || "0",
+          position: "fixed",
+          left: 0,
+          right: 0
+        },
+        maskShow: true,
+        mkclick: true,
+        popupstyle: "top"
+      };
+    },
+    computed: {
+      getStyles() {
+        let res = { backgroundColor: this.bg };
+        if (this.borderRadius || "0") {
+          res = Object.assign(res, { borderRadius: this.borderRadius });
+        }
+        return res;
+      },
+      isDesktop() {
+        return this.popupWidth >= 500 && this.popupHeight >= 500;
+      },
+      bg() {
+        if (this.backgroundColor === "" || this.backgroundColor === "none") {
+          return "transparent";
+        }
+        return this.backgroundColor;
+      }
+    },
+    mounted() {
+      const fixSize = () => {
+        const {
+          windowWidth,
+          windowHeight,
+          windowTop,
+          safeArea,
+          screenHeight,
+          safeAreaInsets
+        } = uni.getSystemInfoSync();
+        this.popupWidth = windowWidth;
+        this.popupHeight = windowHeight + (windowTop || 0);
+        if (safeArea && this.safeArea) {
+          this.safeAreaInsets = safeAreaInsets.bottom;
+        } else {
+          this.safeAreaInsets = 0;
+        }
+      };
+      fixSize();
+    },
+    // TODO vue3
+    unmounted() {
+      this.setH5Visible();
+    },
+    activated() {
+      this.setH5Visible(!this.showPopup);
+    },
+    deactivated() {
+      this.setH5Visible(true);
+    },
+    created() {
+      if (this.isMaskClick === null && this.maskClick === null) {
+        this.mkclick = true;
+      } else {
+        this.mkclick = this.isMaskClick !== null ? this.isMaskClick : this.maskClick;
+      }
+      if (this.animation) {
+        this.duration = 300;
+      } else {
+        this.duration = 0;
+      }
+      this.messageChild = null;
+      this.clearPropagation = false;
+      this.maskClass.backgroundColor = this.maskBackgroundColor;
+    },
+    methods: {
+      setH5Visible(visible = true) {
+      },
+      /**
+       * 公用方法，不显示遮罩层
+       */
+      closeMask() {
+        this.maskShow = false;
+      },
+      /**
+       * 公用方法，遮罩层禁止点击
+       */
+      disableMask() {
+        this.mkclick = false;
+      },
+      // TODO nvue 取消冒泡
+      clear(e) {
+        e.stopPropagation();
+        this.clearPropagation = true;
+      },
+      open(direction) {
+        if (this.showPopup) {
+          return;
+        }
+        let innerType = ["top", "center", "bottom", "left", "right", "message", "dialog", "share"];
+        if (!(direction && innerType.indexOf(direction) !== -1)) {
+          direction = this.type;
+        }
+        if (!this.config[direction]) {
+          formatAppLog("error", "at uni_modules/uni-popup/components/uni-popup/uni-popup.vue:310", "缺少类型：", direction);
+          return;
+        }
+        this[this.config[direction]]();
+        this.$emit("change", {
+          show: true,
+          type: direction
+        });
+      },
+      close(type) {
+        this.showTrans = false;
+        this.$emit("change", {
+          show: false,
+          type: this.type
+        });
+        clearTimeout(this.timer);
+        this.timer = setTimeout(() => {
+          this.showPopup = false;
+        }, 300);
+      },
+      // TODO 处理冒泡事件，头条的冒泡事件有问题 ，先这样兼容
+      touchstart() {
+        this.clearPropagation = false;
+      },
+      onTap() {
+        if (this.clearPropagation) {
+          this.clearPropagation = false;
+          return;
+        }
+        this.$emit("maskClick");
+        if (!this.mkclick)
+          return;
+        this.close();
+      },
+      /**
+       * 顶部弹出样式处理
+       */
+      top(type) {
+        this.popupstyle = this.isDesktop ? "fixforpc-top" : "top";
+        this.ani = ["slide-top"];
+        this.transClass = {
+          position: "fixed",
+          left: 0,
+          right: 0,
+          backgroundColor: this.bg,
+          borderRadius: this.borderRadius || "0"
+        };
+        if (type)
+          return;
+        this.showPopup = true;
+        this.showTrans = true;
+        this.$nextTick(() => {
+          this.showPoptrans();
+          if (this.messageChild && this.type === "message") {
+            this.messageChild.timerClose();
+          }
+        });
+      },
+      /**
+       * 底部弹出样式处理
+       */
+      bottom(type) {
+        this.popupstyle = "bottom";
+        this.ani = ["slide-bottom"];
+        this.transClass = {
+          position: "fixed",
+          left: 0,
+          right: 0,
+          bottom: 0,
+          paddingBottom: this.safeAreaInsets + "px",
+          backgroundColor: this.bg,
+          borderRadius: this.borderRadius || "0"
+        };
+        if (type)
+          return;
+        this.showPoptrans();
+      },
+      /**
+       * 中间弹出样式处理
+       */
+      center(type) {
+        this.popupstyle = "center";
+        this.ani = ["zoom-out", "fade"];
+        this.transClass = {
+          position: "fixed",
+          display: "flex",
+          flexDirection: "column",
+          bottom: 0,
+          left: 0,
+          right: 0,
+          top: 0,
+          justifyContent: "center",
+          alignItems: "center",
+          borderRadius: this.borderRadius || "0"
+        };
+        if (type)
+          return;
+        this.showPoptrans();
+      },
+      left(type) {
+        this.popupstyle = "left";
+        this.ani = ["slide-left"];
+        this.transClass = {
+          position: "fixed",
+          left: 0,
+          bottom: 0,
+          top: 0,
+          backgroundColor: this.bg,
+          borderRadius: this.borderRadius || "0",
+          display: "flex",
+          flexDirection: "column"
+        };
+        if (type)
+          return;
+        this.showPoptrans();
+      },
+      right(type) {
+        this.popupstyle = "right";
+        this.ani = ["slide-right"];
+        this.transClass = {
+          position: "fixed",
+          bottom: 0,
+          right: 0,
+          top: 0,
+          backgroundColor: this.bg,
+          borderRadius: this.borderRadius || "0",
+          display: "flex",
+          flexDirection: "column"
+        };
+        if (type)
+          return;
+        this.showPoptrans();
+      },
+      showPoptrans() {
+        this.$nextTick(() => {
+          this.showPopup = true;
+          this.showTrans = true;
+        });
+      }
+    }
+  };
+  function _sfc_render$X(_ctx, _cache, $props, $setup, $data, $options) {
+    const _component_uni_transition = resolveEasycom(vue.resolveDynamicComponent("uni-transition"), __easycom_0$9);
+    return $data.showPopup ? (vue.openBlock(), vue.createElementBlock(
+      "view",
+      {
+        key: 0,
+        class: vue.normalizeClass(["uni-popup", [$data.popupstyle, $options.isDesktop ? "fixforpc-z-index" : ""]])
+      },
+      [
+        vue.createElementVNode(
+          "view",
+          {
+            onTouchstart: _cache[1] || (_cache[1] = (...args) => $options.touchstart && $options.touchstart(...args))
+          },
+          [
+            $data.maskShow ? (vue.openBlock(), vue.createBlock(_component_uni_transition, {
+              key: "1",
+              name: "mask",
+              "mode-class": "fade",
+              styles: $data.maskClass,
+              duration: $data.duration,
+              show: $data.showTrans,
+              onClick: $options.onTap
+            }, null, 8, ["styles", "duration", "show", "onClick"])) : vue.createCommentVNode("v-if", true),
+            vue.createVNode(_component_uni_transition, {
+              key: "2",
+              "mode-class": $data.ani,
+              name: "content",
+              styles: $data.transClass,
+              duration: $data.duration,
+              show: $data.showTrans,
+              onClick: $options.onTap
+            }, {
+              default: vue.withCtx(() => [
+                vue.createElementVNode(
+                  "view",
+                  {
+                    class: vue.normalizeClass(["uni-popup__wrapper", [$data.popupstyle]]),
+                    style: vue.normalizeStyle($options.getStyles),
+                    onClick: _cache[0] || (_cache[0] = (...args) => $options.clear && $options.clear(...args))
+                  },
+                  [
+                    vue.renderSlot(_ctx.$slots, "default", {}, void 0, true)
+                  ],
+                  6
+                  /* CLASS, STYLE */
+                )
+              ]),
+              _: 3
+              /* FORWARDED */
+            }, 8, ["mode-class", "styles", "duration", "show", "onClick"])
+          ],
+          32
+          /* NEED_HYDRATION */
+        )
+      ],
+      2
+      /* CLASS */
+    )) : vue.createCommentVNode("v-if", true);
+  }
+  const __easycom_0$8 = /* @__PURE__ */ _export_sfc(_sfc_main$Y, [["render", _sfc_render$X], ["__scopeId", "data-v-4dd3c44b"], ["__file", "G:/mobile application development/pdd/uni_modules/uni-popup/components/uni-popup/uni-popup.vue"]]);
+  let retryFun = () => formatAppLog("log", "at uni_modules/uni-id-pages/components/uni-id-pages-agreements/uni-id-pages-agreements.vue:34", "为定义");
+  const _sfc_main$X = {
+    name: "uni-agreements",
+    computed: {
+      agreements() {
+        if (!config.agreements) {
+          return [];
+        }
+        let { serviceUrl, privacyUrl } = config.agreements;
+        return [
+          {
+            url: serviceUrl,
+            title: "用户服务协议"
+          },
+          {
+            url: privacyUrl,
+            title: "隐私政策条款"
+          }
+        ];
+      }
+    },
+    props: {
+      scope: {
+        type: String,
+        default() {
+          return "register";
+        }
+      }
+    },
+    methods: {
+      popupConfirm() {
+        this.isAgree = true;
+        retryFun();
+      },
+      popup(Fun) {
+        this.needPopupAgreements = true;
+        this.$nextTick(() => {
+          if (Fun) {
+            retryFun = Fun;
+          }
+          this.$refs.popupAgreement.open();
+        });
+      },
+      navigateTo({
+        url,
+        title
+      }) {
+        uni.navigateTo({
+          url: "/uni_modules/uni-id-pages/pages/common/webview/webview?url=" + url + "&title=" + title,
+          success: (res) => {
+          },
+          fail: () => {
+          },
+          complete: () => {
+          }
+        });
+      },
+      hasAnd(agreements, index) {
+        return agreements.length - 1 > index;
+      },
+      setAgree(e) {
+        this.isAgree = !this.isAgree;
+        this.$emit("setAgree", this.isAgree);
+      }
+    },
+    created() {
+      var _a;
+      this.needAgreements = (((_a = config == null ? void 0 : config.agreements) == null ? void 0 : _a.scope) || []).includes(this.scope);
+    },
+    data() {
+      return {
+        isAgree: false,
+        needAgreements: true,
+        needPopupAgreements: false
+      };
+    }
+  };
+  function _sfc_render$W(_ctx, _cache, $props, $setup, $data, $options) {
+    const _component_uni_popup_dialog = resolveEasycom(vue.resolveDynamicComponent("uni-popup-dialog"), __easycom_3$5);
+    const _component_uni_popup = resolveEasycom(vue.resolveDynamicComponent("uni-popup"), __easycom_0$8);
+    return $options.agreements.length ? (vue.openBlock(), vue.createElementBlock("view", {
+      key: 0,
+      class: "root"
+    }, [
+      $data.needAgreements ? (vue.openBlock(), vue.createElementBlock(
+        vue.Fragment,
+        { key: 0 },
+        [
+          vue.createElementVNode(
+            "checkbox-group",
+            {
+              onChange: _cache[0] || (_cache[0] = (...args) => $options.setAgree && $options.setAgree(...args))
+            },
+            [
+              vue.createElementVNode("label", { class: "checkbox-box" }, [
+                vue.createElementVNode("checkbox", {
+                  checked: $data.isAgree,
+                  style: { "transform": "scale(0.5)", "margin-right": "-6px" }
+                }, null, 8, ["checked"]),
+                vue.createElementVNode("text", { class: "text" }, "同意")
+              ])
+            ],
+            32
+            /* NEED_HYDRATION */
+          ),
+          vue.createElementVNode("view", { class: "content" }, [
+            (vue.openBlock(true), vue.createElementBlock(
+              vue.Fragment,
+              null,
+              vue.renderList($options.agreements, (agreement, index) => {
+                return vue.openBlock(), vue.createElementBlock("view", {
+                  class: "item",
+                  key: index
+                }, [
+                  vue.createElementVNode("text", {
+                    class: "agreement text",
+                    onClick: ($event) => $options.navigateTo(agreement)
+                  }, vue.toDisplayString(agreement.title), 9, ["onClick"]),
+                  $options.hasAnd($options.agreements, index) ? (vue.openBlock(), vue.createElementBlock("text", {
+                    key: 0,
+                    class: "text and",
+                    space: "nbsp"
+                  }, " 和 ")) : vue.createCommentVNode("v-if", true)
+                ]);
+              }),
+              128
+              /* KEYED_FRAGMENT */
+            ))
+          ])
+        ],
+        64
+        /* STABLE_FRAGMENT */
+      )) : vue.createCommentVNode("v-if", true),
+      vue.createCommentVNode(" 弹出式 "),
+      $data.needAgreements || $data.needPopupAgreements ? (vue.openBlock(), vue.createBlock(
+        _component_uni_popup,
+        {
+          key: 1,
+          ref: "popupAgreement",
+          type: "center"
+        },
+        {
+          default: vue.withCtx(() => [
+            vue.createVNode(_component_uni_popup_dialog, {
+              confirmText: "同意",
+              onConfirm: $options.popupConfirm
+            }, {
+              default: vue.withCtx(() => [
+                vue.createElementVNode("view", { class: "content" }, [
+                  vue.createElementVNode("text", { class: "text" }, "请先阅读并同意"),
+                  (vue.openBlock(true), vue.createElementBlock(
+                    vue.Fragment,
+                    null,
+                    vue.renderList($options.agreements, (agreement, index) => {
+                      return vue.openBlock(), vue.createElementBlock("view", {
+                        class: "item",
+                        key: index
+                      }, [
+                        vue.createElementVNode("text", {
+                          class: "agreement text",
+                          onClick: ($event) => $options.navigateTo(agreement)
+                        }, vue.toDisplayString(agreement.title), 9, ["onClick"]),
+                        $options.hasAnd($options.agreements, index) ? (vue.openBlock(), vue.createElementBlock("text", {
+                          key: 0,
+                          class: "text and",
+                          space: "nbsp"
+                        }, " 和 ")) : vue.createCommentVNode("v-if", true)
+                      ]);
+                    }),
+                    128
+                    /* KEYED_FRAGMENT */
+                  ))
+                ])
+              ]),
+              _: 1
+              /* STABLE */
+            }, 8, ["onConfirm"])
+          ]),
+          _: 1
+          /* STABLE */
+        },
+        512
+        /* NEED_PATCH */
+      )) : vue.createCommentVNode("v-if", true)
+    ])) : vue.createCommentVNode("v-if", true);
+  }
+  const __easycom_5$2 = /* @__PURE__ */ _export_sfc(_sfc_main$X, [["render", _sfc_render$W], ["__scopeId", "data-v-40b82fe9"], ["__file", "G:/mobile application development/pdd/uni_modules/uni-id-pages/components/uni-id-pages-agreements/uni-id-pages-agreements.vue"]]);
   const fontData = [
     {
       "font_class": "arrow-down",
@@ -3835,18 +6679,11 @@ ${i3}
       "unicode": ""
     }
   ];
-  const _export_sfc = (sfc, props) => {
-    const target = sfc.__vccOpts || sfc;
-    for (const [key, val] of props) {
-      target[key] = val;
-    }
-    return target;
-  };
   const getVal = (val) => {
     const reg = /^[0-9]*$/g;
     return typeof val === "number" || reg.test(val) ? val + "px" : val;
   };
-  const _sfc_main$11 = {
+  const _sfc_main$W = {
     name: "UniIcons",
     emits: ["click"],
     props: {
@@ -3900,7 +6737,7 @@ ${i3}
       }
     }
   };
-  function _sfc_render$10(_ctx, _cache, $props, $setup, $data, $options) {
+  function _sfc_render$V(_ctx, _cache, $props, $setup, $data, $options) {
     return vue.openBlock(), vue.createElementBlock(
       "text",
       {
@@ -3915,7 +6752,7 @@ ${i3}
       /* CLASS, STYLE */
     );
   }
-  const __easycom_0$9 = /* @__PURE__ */ _export_sfc(_sfc_main$11, [["render", _sfc_render$10], ["__scopeId", "data-v-d31e1c47"], ["__file", "G:/mobile application development/pdd/uni_modules/uni-icons/components/uni-icons/uni-icons.vue"]]);
+  const __easycom_0$7 = /* @__PURE__ */ _export_sfc(_sfc_main$W, [["render", _sfc_render$V], ["__scopeId", "data-v-d31e1c47"], ["__file", "G:/mobile application development/pdd/uni_modules/uni-icons/components/uni-icons/uni-icons.vue"]]);
   function obj2strClass(obj) {
     let classess = "";
     for (let key in obj) {
@@ -3934,7 +6771,7 @@ ${i3}
     }
     return style;
   }
-  const _sfc_main$10 = {
+  const _sfc_main$V = {
     name: "uni-easyinput",
     emits: [
       "click",
@@ -4291,8 +7128,8 @@ ${i3}
       }
     }
   };
-  function _sfc_render$$(_ctx, _cache, $props, $setup, $data, $options) {
-    const _component_uni_icons = resolveEasycom(vue.resolveDynamicComponent("uni-icons"), __easycom_0$9);
+  function _sfc_render$U(_ctx, _cache, $props, $setup, $data, $options) {
+    const _component_uni_icons = resolveEasycom(vue.resolveDynamicComponent("uni-icons"), __easycom_0$7);
     return vue.openBlock(), vue.createElementBlock(
       "view",
       {
@@ -4416,396 +7253,1031 @@ ${i3}
       /* CLASS, STYLE */
     );
   }
-  const __easycom_0$8 = /* @__PURE__ */ _export_sfc(_sfc_main$10, [["render", _sfc_render$$], ["__scopeId", "data-v-09fd5285"], ["__file", "G:/mobile application development/pdd/uni_modules/uni-easyinput/components/uni-easyinput/uni-easyinput.vue"]]);
-  const _sfc_main$$ = {
-    name: "uniFormsItem",
-    options: {
-      virtualHost: true
-    },
-    provide() {
-      return {
-        uniFormItem: this
-      };
-    },
-    inject: {
-      form: {
-        from: "uniForm",
-        default: null
-      }
-    },
-    props: {
-      // 表单校验规则
-      rules: {
-        type: Array,
-        default() {
-          return null;
+  const __easycom_0$6 = /* @__PURE__ */ _export_sfc(_sfc_main$V, [["render", _sfc_render$U], ["__scopeId", "data-v-09fd5285"], ["__file", "G:/mobile application development/pdd/uni_modules/uni-easyinput/components/uni-easyinput/uni-easyinput.vue"]]);
+  const _sfc_main$U = {
+    computed: {
+      agreements() {
+        if (!config.agreements) {
+          return [];
         }
+        let {
+          serviceUrl,
+          privacyUrl
+        } = config.agreements;
+        return [
+          {
+            url: serviceUrl,
+            title: "用户服务协议"
+          },
+          {
+            url: privacyUrl,
+            title: "隐私政策条款"
+          }
+        ];
       },
-      // 表单域的属性名，在使用校验规则时必填
-      name: {
-        type: [String, Array],
-        default: ""
-      },
-      required: {
-        type: Boolean,
-        default: false
-      },
-      label: {
-        type: String,
-        default: ""
-      },
-      // label的宽度
-      labelWidth: {
-        type: [String, Number],
-        default: ""
-      },
-      // label 居中方式，默认 left 取值 left/center/right
-      labelAlign: {
-        type: String,
-        default: ""
-      },
-      // 强制显示错误信息
-      errorMessage: {
-        type: [String, Boolean],
-        default: ""
-      },
-      // 1.4.0 弃用，统一使用 form 的校验时机
-      // validateTrigger: {
-      // 	type: String,
-      // 	default: ''
-      // },
-      // 1.4.0 弃用，统一使用 form 的label 位置
-      // labelPosition: {
-      // 	type: String,
-      // 	default: ''
-      // },
-      // 1.4.0 以下属性已经废弃，请使用  #label 插槽代替
-      leftIcon: String,
-      iconColor: {
-        type: String,
-        default: "#606266"
+      agree: {
+        get() {
+          return this.getParentComponent().agree;
+        },
+        set(agree) {
+          return this.getParentComponent().agree = agree;
+        }
       }
     },
     data() {
       return {
-        errMsg: "",
-        userRules: null,
-        localLabelAlign: "left",
-        localLabelWidth: "70px",
-        localLabelPos: "left",
-        border: false,
-        isFirstBorder: false
-      };
-    },
-    computed: {
-      // 处理错误信息
-      msg() {
-        return this.errorMessage || this.errMsg;
-      }
-    },
-    watch: {
-      // 规则发生变化通知子组件更新
-      "form.formRules"(val) {
-        this.init();
-      },
-      "form.labelWidth"(val) {
-        this.localLabelWidth = this._labelWidthUnit(val);
-      },
-      "form.labelPosition"(val) {
-        this.localLabelPos = this._labelPosition();
-      },
-      "form.labelAlign"(val) {
-      }
-    },
-    created() {
-      this.init(true);
-      if (this.name && this.form) {
-        this.$watch(
-          () => {
-            const val = this.form._getDataValue(this.name, this.form.localData);
-            return val;
-          },
-          (value, oldVal) => {
-            const isEqual2 = this.form._isEqual(value, oldVal);
-            if (!isEqual2) {
-              const val = this.itemSetValue(value);
-              this.onFieldChange(val, false);
-            }
+        servicesList: [
+          {
+            "id": "username",
+            "text": "账号登录",
+            "logo": "/uni_modules/uni-id-pages/static/login/uni-fab-login/user.png",
+            "path": "/uni_modules/uni-id-pages/pages/login/login-withpwd"
           },
           {
-            immediate: false
+            "id": "smsCode",
+            "text": "短信验证码",
+            "logo": "/uni_modules/uni-id-pages/static/login/uni-fab-login/sms.png",
+            "path": "/uni_modules/uni-id-pages/pages/login/login-withoutpwd?type=smsCode"
+          },
+          {
+            "id": "weixin",
+            "text": "微信登录",
+            "logo": "/uni_modules/uni-id-pages/static/login/uni-fab-login/weixin.png"
+          },
+          {
+            "id": "huawei",
+            "text": "华为登录",
+            "logo": "/uni_modules/uni-id-pages/static/login/uni-fab-login/huawei.png",
+            "path": "/uni_modules/uni-id-pages/pages/login/login-withoutpwd?type=huawei"
+          },
+          {
+            "id": "huaweiMobile",
+            "text": "华为账号一键登录",
+            "logo": "/uni_modules/uni-id-pages/static/login/uni-fab-login/huawei.png",
+            "path": "/uni_modules/uni-id-pages/pages/login/login-withoutpwd?type=huaweiMobile"
+          },
+          {
+            "id": "apple",
+            "text": "苹果登录",
+            "logo": "/uni_modules/uni-id-pages/static/uni-fab-login/apple.png"
+          },
+          {
+            "id": "univerify",
+            "text": "一键登录",
+            "logo": "/uni_modules/uni-id-pages/static/app/uni-fab-login/univerify.png"
+          },
+          {
+            "id": "taobao",
+            "text": "淘宝登录",
+            //暂未提供该登录方式的接口示例
+            "logo": "/uni_modules/uni-id-pages/static/app/uni-fab-login/taobao.png"
+          },
+          {
+            "id": "facebook",
+            "text": "脸书登录",
+            //暂未提供该登录方式的接口示例
+            "logo": "/uni_modules/uni-id-pages/static/app/uni-fab-login/facebook.png"
+          },
+          {
+            "id": "alipay",
+            "text": "支付宝登录",
+            //暂未提供该登录方式的接口示例
+            "logo": "/uni_modules/uni-id-pages/static/app/uni-fab-login/alipay.png"
+          },
+          {
+            "id": "qq",
+            "text": "QQ登录",
+            //暂未提供该登录方式的接口示例
+            "logo": "/uni_modules/uni-id-pages/static/app/uni-fab-login/qq.png"
+          },
+          {
+            "id": "google",
+            "text": "谷歌登录",
+            //暂未提供该登录方式的接口示例
+            "logo": "/uni_modules/uni-id-pages/static/app/uni-fab-login/google.png"
+          },
+          {
+            "id": "douyin",
+            "text": "抖音登录",
+            //暂未提供该登录方式的接口示例
+            "logo": "/uni_modules/uni-id-pages/static/app/uni-fab-login/douyin.png"
+          },
+          {
+            "id": "sinaweibo",
+            "text": "新浪微博",
+            //暂未提供该登录方式的接口示例
+            "logo": "/uni_modules/uni-id-pages/static/app/uni-fab-login/sinaweibo.png"
           }
-        );
+        ],
+        univerifyStyle: {
+          //一键登录弹出窗的样式配置参数
+          "fullScreen": true,
+          // 是否全屏显示，true表示全屏模式，false表示非全屏模式，默认值为false。
+          "backgroundColor": "#ffffff",
+          // 授权页面背景颜色，默认值：#ffffff
+          "buttons": {
+            // 自定义登录按钮
+            "iconWidth": "45px",
+            // 图标宽度（高度等比例缩放） 默认值：45px
+            "list": []
+          },
+          "privacyTerms": {
+            "defaultCheckBoxState": false,
+            // 条款勾选框初始状态 默认值： true
+            "textColor": "#BBBBBB",
+            // 文字颜色 默认值：#BBBBBB
+            "termsColor": "#5496E3",
+            //  协议文字颜色 默认值： #5496E3
+            "prefix": "我已阅读并同意",
+            // 条款前的文案 默认值：“我已阅读并同意”
+            "suffix": "并使用本机号码登录",
+            // 条款后的文案 默认值：“并使用本机号码登录”
+            "privacyItems": []
+          }
+        }
+      };
+    },
+    watch: {
+      agree(agree) {
+        this.univerifyStyle.privacyTerms.defaultCheckBoxState = agree;
       }
     },
-    unmounted() {
-      this.__isUnmounted = true;
-      this.unInit();
+    async created() {
+      let servicesList = this.servicesList;
+      let loginTypes = config.loginTypes;
+      servicesList = servicesList.filter((item) => {
+        if (item.id == "apple" && uni.getSystemInfoSync().osName != "ios") {
+          return false;
+        }
+        return loginTypes.includes(item.id);
+      });
+      if (loginTypes.includes("univerify")) {
+        this.univerifyStyle.privacyTerms.privacyItems = this.agreements;
+        servicesList.forEach(({
+          id,
+          logo,
+          path
+        }) => {
+          if (id != "univerify") {
+            this.univerifyStyle.buttons.list.push({
+              "iconPath": logo,
+              "provider": id,
+              path
+              //路径用于点击快捷按钮时判断是跳转页面
+            });
+          }
+        });
+      }
+      this.servicesList = servicesList.filter((item) => {
+        let path = item.path ? item.path.split("?")[0] : "";
+        return path != this.getRoute(1);
+      });
     },
     methods: {
-      /**
-       * 外部调用方法
-       * 设置规则 ，主要用于小程序自定义检验规则
-       * @param {Array} rules 规则源数据
-       */
-      setRules(rules2 = null) {
-        this.userRules = rules2;
-        this.init(false);
+      getParentComponent() {
+        return this.$parent;
       },
-      // 兼容老版本表单组件
-      setValue() {
+      setUserInfo(e) {
+        formatAppLog("log", "at uni_modules/uni-id-pages/components/uni-id-pages-fab-login/uni-id-pages-fab-login.vue:207", "setUserInfo", e);
       },
-      /**
-       * 外部调用方法
-       * 校验数据
-       * @param {any} value 需要校验的数据
-       * @param {boolean} 是否立即校验
-       * @return {Array|null} 校验内容
-       */
-      async onFieldChange(value, formtrigger = true) {
-        const {
-          formData,
-          localData,
-          errShowType,
-          validateCheck,
-          validateTrigger,
-          _isRequiredField,
-          _realName
-        } = this.form;
-        const name = _realName(this.name);
-        if (!value) {
-          value = this.form.formData[name];
+      getRoute(n2 = 0) {
+        let pages2 = getCurrentPages();
+        if (n2 > pages2.length) {
+          return "";
         }
-        const ruleLen = this.itemRules.rules && this.itemRules.rules.length;
-        if (!this.validator || !ruleLen || ruleLen === 0)
-          return;
-        const isRequiredField2 = _isRequiredField(this.itemRules.rules || []);
-        let result = null;
-        if (validateTrigger === "bind" || formtrigger) {
-          result = await this.validator.validateUpdate(
-            {
-              [name]: value
-            },
-            formData
-          );
-          if (!isRequiredField2 && (value === void 0 || value === "")) {
-            result = null;
-          }
-          if (result && result.errorMessage) {
-            if (errShowType === "undertext") {
-              this.errMsg = !result ? "" : result.errorMessage;
-            }
-            if (errShowType === "toast") {
-              uni.showToast({
-                title: result.errorMessage || "校验错误",
-                icon: "none"
-              });
-            }
-            if (errShowType === "modal") {
-              uni.showModal({
-                title: "提示",
-                content: result.errorMessage || "校验错误"
-              });
-            }
+        return "/" + pages2[pages2.length - n2].route;
+      },
+      toPage(path, index = 0) {
+        formatAppLog("log", "at uni_modules/uni-id-pages/components/uni-id-pages-fab-login/uni-id-pages-fab-login.vue:217", "比较", this.getRoute(1), this.getRoute(2), path);
+        if (this.getRoute(1) == path.split("?")[0] && this.getRoute(1) == "/uni_modules/uni-id-pages/pages/login/login-withoutpwd") {
+          let loginType = path.split("?")[1].split("=")[1];
+          uni.$emit("uni-id-pages-setLoginType", loginType);
+        } else if (this.getRoute(2) == path) {
+          uni.navigateBack();
+        } else if (this.getRoute(1) != path) {
+          if (index === 0) {
+            uni.navigateTo({
+              url: path,
+              animationType: "slide-in-left",
+              complete(e) {
+              }
+            });
           } else {
-            this.errMsg = "";
+            uni.redirectTo({
+              url: path,
+              animationType: "slide-in-left",
+              complete(e) {
+              }
+            });
           }
-          validateCheck(result ? result : null);
         } else {
-          this.errMsg = "";
+          formatAppLog("log", "at uni_modules/uni-id-pages/components/uni-id-pages-fab-login/uni-id-pages-fab-login.vue:244", "出乎意料的情况,path：" + path);
         }
-        return result ? result : null;
       },
-      /**
-       * 初始组件数据
-       */
-      init(type = false) {
-        const {
-          validator: validator2,
-          formRules,
-          childrens,
-          formData,
-          localData,
-          _realName,
-          labelWidth,
-          _getDataValue,
-          _setDataValue
-        } = this.form || {};
-        this.localLabelAlign = this._justifyContent();
-        this.localLabelWidth = this._labelWidthUnit(labelWidth);
-        this.localLabelPos = this._labelPosition();
-        this.form && type && childrens.push(this);
-        if (!validator2 || !formRules)
-          return;
-        if (!this.form.isFirstBorder) {
-          this.form.isFirstBorder = true;
-          this.isFirstBorder = true;
+      async login_before(type, navigateBack = true, options = {}) {
+        var _a;
+        formatAppLog("log", "at uni_modules/uni-id-pages/components/uni-id-pages-fab-login/uni-id-pages-fab-login.vue:248", type, options);
+        if ([
+          "qq",
+          "xiaomi",
+          "sinaweibo",
+          "taobao",
+          "facebook",
+          "google",
+          "alipay",
+          "douyin"
+        ].includes(type)) {
+          return uni.showToast({
+            title: "该登录方式暂未实现，欢迎提交pr",
+            icon: "none",
+            duration: 3e3
+          });
         }
-        if (this.group) {
-          if (!this.group.isFirstBorder) {
-            this.group.isFirstBorder = true;
-            this.isFirstBorder = true;
-          }
+        formatAppLog("log", "at uni_modules/uni-id-pages/components/uni-id-pages-fab-login/uni-id-pages-fab-login.vue:266", "检查当前环境是否支持这种登录方式");
+        let isAppExist = true;
+        await new Promise((callback) => {
+          formatAppLog("log", "at uni_modules/uni-id-pages/components/uni-id-pages-fab-login/uni-id-pages-fab-login.vue:271", "uni.getProvider", uni.getProvider);
+          uni.getProvider({
+            service: "oauth",
+            success: (res) => {
+              const provider = res.providers.find((item) => item.id === type);
+              formatAppLog("log", "at uni_modules/uni-id-pages/components/uni-id-pages-fab-login/uni-id-pages-fab-login.vue:276", "res", res);
+              if (provider) {
+                isAppExist = (provider == null ? void 0 : provider.isAppExist) ?? true;
+                callback();
+              } else {
+                return uni.showToast({
+                  title: "当前设备不支持此登录，请选择其他登录方式",
+                  icon: "none",
+                  duration: 3e3
+                });
+              }
+            },
+            fail: () => {
+              throw new Error("获取服务供应商失败：" + JSON.stringify(err));
+            }
+          });
+        });
+        if (!isAppExist) {
+          return uni.showToast({
+            title: "当前设备不支持此登录，请选择其他登录方式",
+            icon: "none",
+            duration: 3e3
+          });
         }
-        this.border = this.form.border;
-        const name = _realName(this.name);
-        const itemRule = this.userRules || this.rules;
-        if (typeof formRules === "object" && itemRule) {
-          formRules[name] = {
-            rules: itemRule
+        let needAgreements = (((_a = config == null ? void 0 : config.agreements) == null ? void 0 : _a.scope) || []).includes("register");
+        if (type != "univerify" && needAgreements && !this.agree) {
+          let agreementsRef = this.getParentComponent().$refs.agreements;
+          return agreementsRef.popup(() => {
+            this.login_before(type, navigateBack, options);
+          });
+        }
+        formatAppLog("log", "at uni_modules/uni-id-pages/components/uni-id-pages-fab-login/uni-id-pages-fab-login.vue:360", "login ----");
+        uni.showLoading({
+          mask: true
+        });
+        if (type == "univerify") {
+          let closeUniverify = function() {
+            uni.hideLoading();
+            univerifyManager.close();
+            univerifyManager.offButtonsClick(onButtonsClickFn);
           };
-          validator2.updateSchema(formRules);
-        }
-        const itemRules = formRules[name] || {};
-        this.itemRules = itemRules;
-        this.validator = validator2;
-        this.itemSetValue(_getDataValue(this.name, localData));
-      },
-      unInit() {
-        if (this.form) {
-          const {
-            childrens,
-            formData,
-            _realName
-          } = this.form;
-          childrens.forEach((item, index) => {
-            if (item === this) {
-              this.form.childrens.splice(index, 1);
-              delete formData[_realName(item.name)];
+          let univerifyManager = uni.getUniverifyManager();
+          let clickAnotherButtons = false;
+          let onButtonsClickFn = async (res) => {
+            formatAppLog("log", "at uni_modules/uni-id-pages/components/uni-id-pages-fab-login/uni-id-pages-fab-login.vue:372", "点击了第三方登录，provider：", res, res.provider, this.univerifyStyle.buttons.list);
+            clickAnotherButtons = true;
+            let checkBoxState = await uni.getCheckBoxState();
+            this.agree = checkBoxState.state;
+            let {
+              path
+            } = this.univerifyStyle.buttons.list[res.index];
+            if (path) {
+              if (this.getRoute(1).includes("login-withoutpwd") && path.includes("login-withoutpwd")) {
+                this.getParentComponent().showCurrentWebview();
+              }
+              this.toPage(path, 1);
+              closeUniverify();
+            } else {
+              if (this.agree) {
+                closeUniverify();
+                setTimeout(() => {
+                  this.login_before(res.provider);
+                }, 500);
+              } else {
+                uni.showToast({
+                  title: "你未同意隐私政策协议",
+                  icon: "none",
+                  duration: 3e3
+                });
+              }
+            }
+          };
+          univerifyManager.onButtonsClick(onButtonsClickFn);
+          return univerifyManager.login({
+            "univerifyStyle": this.univerifyStyle,
+            success: (res) => {
+              this.login(res.authResult, "univerify");
+            },
+            fail(err2) {
+              formatAppLog("log", "at uni_modules/uni-id-pages/components/uni-id-pages-fab-login/uni-id-pages-fab-login.vue:422", err2);
+              if (!clickAnotherButtons) {
+                uni.navigateBack();
+              }
+            },
+            complete: async (e) => {
+              uni.hideLoading();
+              univerifyManager.offButtonsClick(onButtonsClickFn);
             }
           });
         }
-      },
-      // 设置item 的值
-      itemSetValue(value) {
-        const name = this.form._realName(this.name);
-        const rules2 = this.itemRules.rules || [];
-        const val = this.form._getValue(name, value, rules2);
-        this.form._setDataValue(name, this.form.formData, val);
-        return val;
-      },
-      /**
-       * 移除该表单项的校验结果
-       */
-      clearValidate() {
-        this.errMsg = "";
-      },
-      // 是否显示星号
-      _isRequired() {
-        return this.required;
-      },
-      // 处理对齐方式
-      _justifyContent() {
-        if (this.form) {
-          const {
-            labelAlign
-          } = this.form;
-          let labelAli = this.labelAlign ? this.labelAlign : labelAlign;
-          if (labelAli === "left")
-            return "flex-start";
-          if (labelAli === "center")
-            return "center";
-          if (labelAli === "right")
-            return "flex-end";
+        if (type === "weixinMobile" || type === "huaweiMobile") {
+          return this.login({
+            phoneCode: options.phoneNumberCode
+          }, type);
         }
-        return "flex-start";
-      },
-      // 处理 label宽度单位 ,继承父元素的值
-      _labelWidthUnit(labelWidth) {
-        return this.num2px(this.labelWidth ? this.labelWidth : labelWidth || (this.label ? 70 : "auto"));
-      },
-      // 处理 label 位置
-      _labelPosition() {
-        if (this.form)
-          return this.form.labelPosition || "left";
-        return "left";
-      },
-      /**
-       * 触发时机
-       * @param {Object} rule 当前规则内时机
-       * @param {Object} itemRlue 当前组件时机
-       * @param {Object} parentRule 父组件时机
-       */
-      isTrigger(rule, itemRlue, parentRule) {
-        if (rule === "submit" || !rule) {
-          if (rule === void 0) {
-            if (itemRlue !== "bind") {
-              if (!itemRlue) {
-                return parentRule === "" ? "bind" : "submit";
-              }
-              return "submit";
+        uni.login({
+          "provider": type,
+          "onlyAuthorize": true,
+          "univerifyStyle": this.univerifyStyle,
+          success: async (e) => {
+            if (type == "apple") {
+              let res = await this.getUserInfo({
+                provider: "apple"
+              });
+              Object.assign(e.authResult, res.userInfo);
+              uni.hideLoading();
             }
-            return "bind";
+            this.login(["huawei", "weixin"].includes(type) ? {
+              code: e.code
+            } : e.authResult, type);
+          },
+          fail: async (err2) => {
+            formatAppLog("error", "at uni_modules/uni-id-pages/components/uni-id-pages-fab-login/uni-id-pages-fab-login.vue:468", JSON.stringify(err2));
+            uni.showModal({
+              content: `登录失败; code: ${err2.errCode || -1}`,
+              confirmText: "知道了",
+              showCancel: false
+            });
+            uni.hideLoading();
           }
-          return "submit";
-        }
-        return "bind";
+        });
       },
-      num2px(num) {
-        if (typeof num === "number") {
-          return `${num}px`;
-        }
-        return num;
+      login(params, type) {
+        formatAppLog("log", "at uni_modules/uni-id-pages/components/uni-id-pages-fab-login/uni-id-pages-fab-login.vue:480", { params, type });
+        let action = "loginBy" + type.trim().replace(type[0], type[0].toUpperCase());
+        const uniIdCo2 = nr.importObject("uni-id-co", {
+          customUI: true
+        });
+        uniIdCo2[action](params).then((result) => {
+          uni.showToast({
+            title: "登录成功",
+            icon: "none",
+            duration: 2e3
+          });
+          mutations.loginSuccess(result);
+        }).catch((e) => {
+          uni.showModal({
+            content: e.message,
+            confirmText: "知道了",
+            showCancel: false
+          });
+        }).finally((e) => {
+          if (type == "univerify") {
+            uni.closeAuthView();
+          }
+          uni.hideLoading();
+        });
+      },
+      async getUserInfo(e) {
+        return new Promise((resolve, reject) => {
+          uni.getUserInfo({
+            ...e,
+            success: (res) => {
+              resolve(res);
+            },
+            fail: (err2) => {
+              uni.showModal({
+                content: JSON.stringify(err2),
+                showCancel: false
+              });
+              reject(err2);
+            }
+          });
+        });
       }
     }
   };
-  function _sfc_render$_(_ctx, _cache, $props, $setup, $data, $options) {
-    return vue.openBlock(), vue.createElementBlock(
-      "view",
-      {
-        class: vue.normalizeClass(["uni-forms-item", ["is-direction-" + $data.localLabelPos, $data.border ? "uni-forms-item--border" : "", $data.border && $data.isFirstBorder ? "is-first-border" : ""]])
+  function _sfc_render$T(_ctx, _cache, $props, $setup, $data, $options) {
+    return vue.openBlock(), vue.createElementBlock("view", null, [
+      vue.createElementVNode("view", { class: "fab-login-box" }, [
+        (vue.openBlock(true), vue.createElementBlock(
+          vue.Fragment,
+          null,
+          vue.renderList($data.servicesList, (item, index) => {
+            return vue.openBlock(), vue.createElementBlock("view", {
+              class: "item",
+              key: index,
+              onClick: ($event) => item.path ? $options.toPage(item.path) : $options.login_before(item.id, false)
+            }, [
+              vue.createElementVNode("image", {
+                class: "logo",
+                src: item.logo,
+                mode: "scaleToFill"
+              }, null, 8, ["src"]),
+              vue.createElementVNode(
+                "text",
+                { class: "login-title" },
+                vue.toDisplayString(item.text),
+                1
+                /* TEXT */
+              )
+            ], 8, ["onClick"]);
+          }),
+          128
+          /* KEYED_FRAGMENT */
+        ))
+      ])
+    ]);
+  }
+  const __easycom_2$1 = /* @__PURE__ */ _export_sfc(_sfc_main$U, [["render", _sfc_render$T], ["__scopeId", "data-v-c5c7cfa0"], ["__file", "G:/mobile application development/pdd/uni_modules/uni-id-pages/components/uni-id-pages-fab-login/uni-id-pages-fab-login.vue"]]);
+  let currentWebview;
+  const _sfc_main$T = {
+    mixins: [mixin],
+    data() {
+      return {
+        type: "",
+        //快捷登录方式
+        phone: "",
+        //手机号码
+        focusPhone: false,
+        logo: ""
+      };
+    },
+    computed: {
+      async loginTypes() {
+        return config.loginTypes;
       },
-      [
-        vue.renderSlot(_ctx.$slots, "label", {}, () => [
-          vue.createElementVNode(
-            "view",
+      isPhone() {
+        return /^1\d{10}$/.test(this.phone);
+      },
+      imgSrc() {
+        const images = {
+          weixin: "/uni_modules/uni-id-pages/static/login/weixin.png",
+          apple: "/uni_modules/uni-id-pages/static/app/apple.png",
+          huawei: "/uni_modules/uni-id-pages/static/login/huawei.png",
+          huaweiMobile: "/uni_modules/uni-id-pages/static/login/huawei-mobile.png"
+        };
+        return images[this.type];
+      }
+    },
+    async onLoad(e) {
+      let type = e.type || config.loginTypes[0];
+      this.type = type;
+      if (type != "univerify") {
+        this.focusPhone = true;
+      }
+      this.$nextTick(() => {
+        if (["weixin", "apple", "huawei", "huaweiMobile"].includes(type)) {
+          this.$refs.uniFabLogin.servicesList = this.$refs.uniFabLogin.servicesList.filter((item) => item.id != type);
+        }
+      });
+      uni.$on("uni-id-pages-setLoginType", (type2) => {
+        this.type = type2;
+      });
+    },
+    onShow() {
+    },
+    onUnload() {
+      uni.$off("uni-id-pages-setLoginType");
+    },
+    onReady() {
+      if (config.loginTypes.includes("univerify") && this.type == "univerify") {
+        uni.preLogin({
+          provider: "univerify",
+          success: () => {
+            const pages2 = getCurrentPages();
+            currentWebview = pages2[pages2.length - 1].$getAppWebview();
+            currentWebview.setStyle({
+              "top": "2000px"
+              // 隐藏当前页面窗体
+            });
+            this.$refs.uniFabLogin.login_before("univerify");
+          },
+          fail: (err2) => {
+            formatAppLog("log", "at uni_modules/uni-id-pages/pages/login/login-withoutpwd.vue:123", err2);
+            if (config.loginTypes.length > 1) {
+              this.$refs.uniFabLogin.login_before(config.loginTypes[1]);
+            } else {
+              uni.showModal({
+                content: err2.message,
+                showCancel: false
+              });
+            }
+          }
+        });
+      }
+    },
+    methods: {
+      showCurrentWebview() {
+        currentWebview.setStyle({
+          "top": 0
+        });
+      },
+      showAgreementModal() {
+        this.$refs.agreements.popup();
+      },
+      quickLogin(e) {
+        var _a, _b;
+        let options = {};
+        formatAppLog("log", "at uni_modules/uni-id-pages/pages/login/login-withoutpwd.vue:149", e);
+        if ((_a = e.detail) == null ? void 0 : _a.code) {
+          options.phoneNumberCode = e.detail.code;
+        }
+        if ((this.type === "weixinMobile" || this.type === "huaweiMobile") && !((_b = e.detail) == null ? void 0 : _b.code))
+          return;
+        this.$refs.uniFabLogin.login_before(this.type, true, options);
+      },
+      toSmsPage() {
+        if (!this.isPhone) {
+          this.focusPhone = true;
+          return uni.showToast({
+            title: "手机号码格式不正确",
+            icon: "none",
+            duration: 3e3
+          });
+        }
+        if (this.needAgreements && !this.agree) {
+          return this.$refs.agreements.popup(this.toSmsPage);
+        }
+        uni.navigateTo({
+          url: "/uni_modules/uni-id-pages/pages/login/login-smscode?phoneNumber=" + this.phone
+        });
+      },
+      //去密码登录页
+      toPwdLogin() {
+        uni.navigateTo({
+          url: "../login/password"
+        });
+      },
+      chooseArea() {
+        uni.showToast({
+          title: "暂不支持其他国家",
+          icon: "none",
+          duration: 3e3
+        });
+      }
+    }
+  };
+  function _sfc_render$S(_ctx, _cache, $props, $setup, $data, $options) {
+    const _component_uni_id_pages_agreements = resolveEasycom(vue.resolveDynamicComponent("uni-id-pages-agreements"), __easycom_5$2);
+    const _component_uni_easyinput = resolveEasycom(vue.resolveDynamicComponent("uni-easyinput"), __easycom_0$6);
+    const _component_uni_id_pages_fab_login = resolveEasycom(vue.resolveDynamicComponent("uni-id-pages-fab-login"), __easycom_2$1);
+    return vue.openBlock(), vue.createElementBlock("view", { class: "uni-content" }, [
+      vue.createElementVNode("view", { class: "login-logo" }, [
+        vue.createElementVNode("image", { src: $data.logo }, null, 8, ["src"])
+      ]),
+      vue.createCommentVNode(" 顶部文字 "),
+      vue.createElementVNode("text", { class: "title" }, "请选择登录方式"),
+      vue.createCommentVNode(" 快捷登录框 当url带参数时有效 "),
+      ["apple", "weixin", "weixinMobile", "huawei", "huaweiMobile"].includes($data.type) ? (vue.openBlock(), vue.createElementBlock(
+        vue.Fragment,
+        { key: 0 },
+        [
+          vue.createElementVNode("text", { class: "tip" }, "将根据第三方账号服务平台的授权范围获取你的信息"),
+          vue.createElementVNode("view", { class: "quickLogin" }, [
+            $data.type !== "weixinMobile" && $data.type !== "huaweiMobile" ? (vue.openBlock(), vue.createElementBlock("image", {
+              key: 0,
+              onClick: _cache[0] || (_cache[0] = (...args) => $options.quickLogin && $options.quickLogin(...args)),
+              src: $options.imgSrc,
+              mode: "widthFix",
+              class: "quickLoginBtn"
+            }, null, 8, ["src"])) : (vue.openBlock(), vue.createElementBlock("view", {
+              key: 1,
+              style: { "position": "relative" }
+            }, [
+              $data.type === "weixinMobile" ? (vue.openBlock(), vue.createElementBlock(
+                "button",
+                {
+                  key: 0,
+                  type: "primary",
+                  "open-type": "getPhoneNumber",
+                  onGetphonenumber: _cache[1] || (_cache[1] = (...args) => $options.quickLogin && $options.quickLogin(...args)),
+                  class: "uni-btn"
+                },
+                "微信授权手机号登录",
+                32
+                /* NEED_HYDRATION */
+              )) : vue.createCommentVNode("v-if", true),
+              $data.type === "huaweiMobile" ? (vue.openBlock(), vue.createElementBlock(
+                "button",
+                {
+                  key: 1,
+                  "open-type": "getPhoneNumber",
+                  onGetphonenumber: _cache[2] || (_cache[2] = (...args) => $options.quickLogin && $options.quickLogin(...args)),
+                  class: "quickLoginBtn",
+                  style: { "padding": "0", "display": "flex" }
+                },
+                [
+                  vue.createElementVNode("image", {
+                    src: $options.imgSrc,
+                    mode: "widthFix"
+                  }, null, 8, ["src"])
+                ],
+                32
+                /* NEED_HYDRATION */
+              )) : vue.createCommentVNode("v-if", true),
+              this.needAgreements && !this.agree ? (vue.openBlock(), vue.createElementBlock("view", {
+                key: 2,
+                class: "mobile-login-agreement-layer",
+                onClick: _cache[3] || (_cache[3] = (...args) => $options.showAgreementModal && $options.showAgreementModal(...args))
+              })) : vue.createCommentVNode("v-if", true)
+            ])),
+            vue.createVNode(
+              _component_uni_id_pages_agreements,
+              {
+                scope: "register",
+                ref: "agreements"
+              },
+              null,
+              512
+              /* NEED_PATCH */
+            )
+          ])
+        ],
+        64
+        /* STABLE_FRAGMENT */
+      )) : (vue.openBlock(), vue.createElementBlock(
+        vue.Fragment,
+        { key: 1 },
+        [
+          vue.createElementVNode("text", { class: "tip" }, "未注册的账号验证通过后将自动注册"),
+          vue.createElementVNode("view", { class: "phone-box" }, [
+            vue.createElementVNode("view", {
+              onClick: _cache[4] || (_cache[4] = (...args) => $options.chooseArea && $options.chooseArea(...args)),
+              class: "area"
+            }, "+86"),
+            vue.createVNode(_component_uni_easyinput, {
+              trim: "both",
+              focus: $data.focusPhone,
+              onBlur: _cache[5] || (_cache[5] = ($event) => $data.focusPhone = false),
+              class: "input-box",
+              type: "number",
+              inputBorder: false,
+              modelValue: $data.phone,
+              "onUpdate:modelValue": _cache[6] || (_cache[6] = ($event) => $data.phone = $event),
+              maxlength: "11",
+              placeholder: "请输入手机号"
+            }, null, 8, ["focus", "modelValue"])
+          ]),
+          vue.createVNode(
+            _component_uni_id_pages_agreements,
             {
-              class: vue.normalizeClass(["uni-forms-item__label", { "no-label": !$props.label && !$props.required }]),
-              style: vue.normalizeStyle({ width: $data.localLabelWidth, justifyContent: $data.localLabelAlign })
+              scope: "register",
+              ref: "agreements"
             },
-            [
-              $props.required ? (vue.openBlock(), vue.createElementBlock("text", {
-                key: 0,
-                class: "is-required"
-              }, "*")) : vue.createCommentVNode("v-if", true),
-              vue.createElementVNode(
-                "text",
-                null,
-                vue.toDisplayString($props.label),
-                1
-                /* TEXT */
-              )
-            ],
-            6
-            /* CLASS, STYLE */
-          )
-        ], true),
-        vue.createElementVNode("view", { class: "uni-forms-item__content" }, [
-          vue.renderSlot(_ctx.$slots, "default", {}, void 0, true),
+            null,
+            512
+            /* NEED_PATCH */
+          ),
+          vue.createElementVNode("button", {
+            class: "uni-btn",
+            type: "primary",
+            onClick: _cache[7] || (_cache[7] = (...args) => $options.toSmsPage && $options.toSmsPage(...args))
+          }, "获取验证码")
+        ],
+        64
+        /* STABLE_FRAGMENT */
+      )),
+      vue.createCommentVNode(" 固定定位的快捷登录按钮 "),
+      vue.createVNode(
+        _component_uni_id_pages_fab_login,
+        { ref: "uniFabLogin" },
+        null,
+        512
+        /* NEED_PATCH */
+      )
+    ]);
+  }
+  const UniModulesUniIdPagesPagesLoginLoginWithoutpwd = /* @__PURE__ */ _export_sfc(_sfc_main$T, [["render", _sfc_render$S], ["__file", "G:/mobile application development/pdd/uni_modules/uni-id-pages/pages/login/login-withoutpwd.vue"]]);
+  const _sfc_main$S = {
+    props: {
+      modelValue: String,
+      value: String,
+      scene: {
+        type: String,
+        default() {
+          return "";
+        }
+      },
+      focus: {
+        type: Boolean,
+        default() {
+          return false;
+        }
+      }
+    },
+    computed: {
+      val: {
+        get() {
+          return this.value || this.modelValue;
+        },
+        set(value) {
+          this.$emit("update:modelValue", value);
+        }
+      }
+    },
+    data() {
+      return {
+        focusCaptchaInput: false,
+        captchaBase64: "",
+        loging: false
+      };
+    },
+    watch: {
+      scene: {
+        handler(scene) {
+          if (scene) {
+            this.getImageCaptcha(this.focus);
+          } else {
+            uni.showToast({
+              title: "scene不能为空",
+              icon: "none"
+            });
+          }
+        },
+        immediate: true
+      }
+    },
+    methods: {
+      getImageCaptcha(focus = true) {
+        this.loging = true;
+        if (focus) {
+          this.val = "";
+          this.focusCaptchaInput = true;
+        }
+        const uniIdCo2 = nr.importObject("uni-captcha-co", {
+          customUI: true
+        });
+        uniIdCo2.getImageCaptcha({
+          scene: this.scene
+        }).then((result) => {
+          this.captchaBase64 = result.captchaBase64;
+        }).catch((e) => {
+          uni.showToast({
+            title: e.message,
+            icon: "none"
+          });
+        }).finally((e) => {
+          this.loging = false;
+        });
+      }
+    }
+  };
+  function _sfc_render$R(_ctx, _cache, $props, $setup, $data, $options) {
+    const _component_uni_icons = resolveEasycom(vue.resolveDynamicComponent("uni-icons"), __easycom_0$7);
+    return vue.openBlock(), vue.createElementBlock("view", { class: "captcha-box" }, [
+      vue.createElementVNode("view", { class: "captcha-img-box" }, [
+        $data.loging ? (vue.openBlock(), vue.createBlock(_component_uni_icons, {
+          key: 0,
+          class: "loding",
+          size: "20px",
+          color: "#BBB",
+          type: "spinner-cycle"
+        })) : vue.createCommentVNode("v-if", true),
+        vue.createElementVNode("image", {
+          class: vue.normalizeClass(["captcha-img", { opacity: $data.loging }]),
+          onClick: _cache[0] || (_cache[0] = (...args) => $options.getImageCaptcha && $options.getImageCaptcha(...args)),
+          src: $data.captchaBase64,
+          mode: "widthFix"
+        }, null, 10, ["src"])
+      ]),
+      vue.withDirectives(vue.createElementVNode("input", {
+        onBlur: _cache[1] || (_cache[1] = ($event) => $data.focusCaptchaInput = false),
+        focus: $data.focusCaptchaInput,
+        type: "text",
+        class: "captcha",
+        inputBorder: false,
+        maxlength: "4",
+        "onUpdate:modelValue": _cache[2] || (_cache[2] = ($event) => $options.val = $event),
+        placeholder: "请输入验证码"
+      }, null, 40, ["focus"]), [
+        [vue.vModelText, $options.val]
+      ])
+    ]);
+  }
+  const __easycom_0$5 = /* @__PURE__ */ _export_sfc(_sfc_main$S, [["render", _sfc_render$R], ["__scopeId", "data-v-a00179ae"], ["__file", "G:/mobile application development/pdd/uni_modules/uni-captcha/components/uni-captcha/uni-captcha.vue"]]);
+  function debounce$1(func, wait) {
+    let timer;
+    wait = wait || 500;
+    return function() {
+      let context = this;
+      let args = arguments;
+      if (timer)
+        clearTimeout(timer);
+      let callNow = !timer;
+      timer = setTimeout(() => {
+        timer = null;
+      }, wait);
+      if (callNow)
+        func.apply(context, args);
+    };
+  }
+  const _sfc_main$R = {
+    name: "uni-sms-form",
+    model: {
+      prop: "modelValue",
+      event: "update:modelValue"
+    },
+    props: {
+      event: ["update:modelValue"],
+      /**
+       * 倒计时时长 s
+       */
+      count: {
+        type: [String, Number],
+        default: 60
+      },
+      /**
+       * 手机号码
+       */
+      phone: {
+        type: [String, Number],
+        default: ""
+      },
+      /*
+      	验证码类型，用于防止不同功能的验证码混用，目前支持的类型login登录、register注册、bind绑定手机、unbind解绑手机
+      */
+      type: {
+        type: String,
+        default() {
+          return "login";
+        }
+      },
+      /*
+      	验证码输入框是否默认获取焦点
+      */
+      focusCaptchaInput: {
+        type: Boolean,
+        default() {
+          return false;
+        }
+      }
+    },
+    data() {
+      return {
+        captcha: "",
+        reverseNumber: 0,
+        reverseTimer: null,
+        modelValue: "",
+        focusSmsCodeInput: false
+      };
+    },
+    watch: {
+      captcha(value, oldValue) {
+        if (value.length == 4 && oldValue.length != 4) {
+          this.start();
+        }
+      },
+      modelValue(value) {
+        this.$emit("input", value);
+        this.$emit("update:modelValue", value);
+      }
+    },
+    computed: {
+      innerText() {
+        if (this.reverseNumber == 0)
+          return "获取短信验证码";
+        return "重新发送(" + this.reverseNumber + "s)";
+      }
+    },
+    created() {
+      this.initClick();
+    },
+    methods: {
+      getImageCaptcha(focus) {
+        this.$refs.captcha.getImageCaptcha(focus);
+      },
+      initClick() {
+        this.start = debounce$1(() => {
+          if (this.reverseNumber != 0)
+            return;
+          this.sendMsg();
+        });
+      },
+      sendMsg() {
+        if (this.captcha.length != 4) {
+          this.$refs.captcha.focusCaptchaInput = true;
+          return uni.showToast({
+            title: "请先输入图形验证码",
+            icon: "none",
+            duration: 3e3
+          });
+        }
+        let reg_phone = /^1\d{10}$/;
+        if (!reg_phone.test(this.phone))
+          return uni.showToast({
+            title: "手机号格式错误",
+            icon: "none",
+            duration: 3e3
+          });
+        const uniIdCo2 = nr.importObject("uni-id-co", {
+          customUI: true
+        });
+        formatAppLog("log", "at uni_modules/uni-id-pages/components/uni-id-pages-sms-form/uni-id-pages-sms-form.vue:139", "sendSmsCode", {
+          "mobile": this.phone,
+          "scene": this.type,
+          "captcha": this.captcha
+        });
+        uniIdCo2.sendSmsCode({
+          "mobile": this.phone,
+          "scene": this.type,
+          "captcha": this.captcha
+        }).then((result) => {
+          uni.showToast({
+            title: "短信验证码发送成功",
+            icon: "none",
+            duration: 3e3
+          });
+          this.reverseNumber = Number(this.count);
+          this.getCode();
+        }).catch((e) => {
+          if (e.code == "uni-id-invalid-sms-template-id") {
+            this.modelValue = "123456";
+            uni.showToast({
+              title: "已启动测试模式,详情【控制台信息】",
+              icon: "none",
+              duration: 3e3
+            });
+            formatAppLog("warn", "at uni_modules/uni-id-pages/components/uni-id-pages-sms-form/uni-id-pages-sms-form.vue:164", e.message);
+          } else {
+            this.getImageCaptcha();
+            this.captcha = "";
+            uni.showToast({
+              title: e.message,
+              icon: "none",
+              duration: 3e3
+            });
+          }
+        });
+      },
+      getCode() {
+        if (this.reverseNumber == 0) {
+          clearTimeout(this.reverseTimer);
+          this.reverseTimer = null;
+          return;
+        }
+        this.reverseNumber--;
+        this.reverseTimer = setTimeout(() => {
+          this.getCode();
+        }, 1e3);
+      }
+    }
+  };
+  function _sfc_render$Q(_ctx, _cache, $props, $setup, $data, $options) {
+    const _component_uni_captcha = resolveEasycom(vue.resolveDynamicComponent("uni-captcha"), __easycom_0$5);
+    const _component_uni_easyinput = resolveEasycom(vue.resolveDynamicComponent("uni-easyinput"), __easycom_0$6);
+    return vue.openBlock(), vue.createElementBlock("view", null, [
+      vue.createVNode(_component_uni_captcha, {
+        focus: $props.focusCaptchaInput,
+        ref: "captcha",
+        scene: "send-sms-code",
+        modelValue: $data.captcha,
+        "onUpdate:modelValue": _cache[0] || (_cache[0] = ($event) => $data.captcha = $event)
+      }, null, 8, ["focus", "modelValue"]),
+      vue.createElementVNode("view", { class: "box" }, [
+        vue.createVNode(_component_uni_easyinput, {
+          focus: $data.focusSmsCodeInput,
+          onBlur: _cache[1] || (_cache[1] = ($event) => $data.focusSmsCodeInput = false),
+          type: "number",
+          class: "input-box",
+          inputBorder: false,
+          modelValue: $data.modelValue,
+          "onUpdate:modelValue": _cache[2] || (_cache[2] = ($event) => $data.modelValue = $event),
+          maxlength: "6",
+          clearable: false,
+          trim: "both",
+          placeholder: "请输入短信验证码"
+        }, null, 8, ["focus", "modelValue"]),
+        vue.createElementVNode("view", {
+          class: "short-code-btn",
+          "hover-class": "hover",
+          onClick: _cache[3] || (_cache[3] = (...args) => _ctx.start && _ctx.start(...args))
+        }, [
           vue.createElementVNode(
-            "view",
+            "text",
             {
-              class: vue.normalizeClass(["uni-forms-item__error", { "msg--active": $options.msg }])
+              class: vue.normalizeClass(["inner-text", $data.reverseNumber == 0 ? "inner-text-active" : ""])
             },
-            [
-              vue.createElementVNode(
-                "text",
-                null,
-                vue.toDisplayString($options.msg),
-                1
-                /* TEXT */
-              )
-            ],
-            2
-            /* CLASS */
+            vue.toDisplayString($options.innerText),
+            3
+            /* TEXT, CLASS */
           )
         ])
-      ],
-      2
-      /* CLASS */
-    );
+      ])
+    ]);
   }
-  const __easycom_1$3 = /* @__PURE__ */ _export_sfc(_sfc_main$$, [["render", _sfc_render$_], ["__scopeId", "data-v-462874dd"], ["__file", "G:/mobile application development/pdd/uni_modules/uni-forms/components/uni-forms-item/uni-forms-item.vue"]]);
+  const __easycom_3$4 = /* @__PURE__ */ _export_sfc(_sfc_main$R, [["render", _sfc_render$Q], ["__scopeId", "data-v-4b649130"], ["__file", "G:/mobile application development/pdd/uni_modules/uni-id-pages/components/uni-id-pages-sms-form/uni-id-pages-sms-form.vue"]]);
   var pattern = {
     email: /^\S+?@\S+?\.\S+?$/,
     idcard: /^[1-9]\d{5}(18|19|([23]\d))\d{2}((0[1-9])|(10|11|12))(([0-2][1-9])|10|20|30|31)\d{3}[0-9Xx]$/,
@@ -5369,7 +8841,7 @@ ${i3}
       return false;
     }
   };
-  const _sfc_main$_ = {
+  const _sfc_main$Q = {
     name: "uniForms",
     emits: ["validate", "submit"],
     options: {
@@ -5671,3851 +9143,15 @@ ${i3}
       _isEqual: isEqual
     }
   };
-  function _sfc_render$Z(_ctx, _cache, $props, $setup, $data, $options) {
+  function _sfc_render$P(_ctx, _cache, $props, $setup, $data, $options) {
     return vue.openBlock(), vue.createElementBlock("view", { class: "uni-forms" }, [
       vue.createElementVNode("form", null, [
         vue.renderSlot(_ctx.$slots, "default", {}, void 0, true)
       ])
     ]);
   }
-  const __easycom_3$5 = /* @__PURE__ */ _export_sfc(_sfc_main$_, [["render", _sfc_render$Z], ["__scopeId", "data-v-9a1e3c32"], ["__file", "G:/mobile application development/pdd/uni_modules/uni-forms/components/uni-forms/uni-forms.vue"]]);
-  const config = {
-    // 调试模式
-    debug: false,
-    /*
-    	登录类型 未列举到的或运行环境不支持的，将被自动隐藏。
-    	如果需要在不同平台有不同的配置，直接用条件编译即可
-    */
-    isAdmin: false,
-    // 区分管理端与用户端
-    loginTypes: [
-      // "qq",
-      // "xiaomi",
-      // "sinaweibo",
-      // "taobao",
-      // "facebook",
-      // "google",
-      // "alipay",
-      // "douyin",
-      "univerify",
-      "weixin",
-      "username",
-      "apple",
-      "smsCode"
-    ],
-    // 政策协议
-    agreements: {
-      serviceUrl: "https://xxx",
-      // 用户服务协议链接
-      privacyUrl: "https://xxx",
-      // 隐私政策条款链接
-      // 哪些场景下显示，1.注册（包括登录并注册，如：微信登录、苹果登录、短信验证码登录）、2.登录（如：用户名密码登录）
-      scope: [
-        "register",
-        "login",
-        "realNameVerify"
-      ]
-    },
-    // 提供各类服务接入（如微信登录服务）的应用id
-    appid: {
-      weixin: {
-        // 微信公众号的appid，来源:登录微信公众号（https://mp.weixin.qq.com）-> 设置与开发 -> 基本配置 -> 公众号开发信息 -> AppID
-        h5: "wx2489521bfcd40296",
-        // 微信开放平台的appid，来源:登录微信开放平台（https://open.weixin.qq.com） -> 管理中心 -> 网站应用 -> 选择对应的应用名称，点击查看 -> AppID
-        web: "wx2489521bfcd40296"
-      }
-    },
-    /**
-    * 密码强度
-    * super（超强：密码必须包含大小写字母、数字和特殊符号，长度范围：8-16位之间）
-    * strong（强: 密密码必须包含字母、数字和特殊符号，长度范围：8-16位之间）
-    * medium (中：密码必须为字母、数字和特殊符号任意两种的组合，长度范围：8-16位之间)
-    * weak（弱：密码必须包含字母和数字，长度范围：6-16位之间）
-    * 为空或false则不验证密码强度
-    */
-    passwordStrength: "medium",
-    /**
-    * 登录后允许用户设置密码（只针对未设置密码得用户）
-    * 开启此功能将 setPasswordAfterLogin 设置为 true 即可
-    * "setPasswordAfterLogin": false
-    *
-    * 如果允许用户跳过设置密码 将 allowSkip 设置为 true
-    * "setPasswordAfterLogin": {
-    *   "allowSkip": true
-    * }
-    * */
-    setPasswordAfterLogin: false
-  };
-  const uniIdCo$b = nr.importObject("uni-id-co");
-  const db$3 = nr.database();
-  const usersTable = db$3.collection("uni-id-users");
-  let hostUserInfo = uni.getStorageSync("uni-id-pages-userInfo") || {};
-  const data = {
-    userInfo: hostUserInfo,
-    hasLogin: Object.keys(hostUserInfo).length != 0
-  };
-  const mutations = {
-    // data不为空，表示传递要更新的值(注意不是覆盖是合并),什么也不传时，直接查库获取更新
-    async updateUserInfo(data2 = false) {
-      if (data2) {
-        usersTable.where("_id==$env.uid").update(data2).then((e) => {
-          if (e.result.updated) {
-            uni.showToast({
-              title: "更新成功",
-              icon: "none",
-              duration: 3e3
-            });
-            this.setUserInfo(data2);
-          } else {
-            uni.showToast({
-              title: "没有改变",
-              icon: "none",
-              duration: 3e3
-            });
-          }
-        });
-      } else {
-        const _id = nr.getCurrentUserInfo().uid;
-        this.setUserInfo({ _id }, { cover: true });
-        const uniIdCo2 = nr.importObject("uni-id-co", {
-          customUI: true
-        });
-        try {
-          let res = await usersTable.where("'_id' == $cloudEnv_uid").field("mobile,nickname,username,email,avatar_file,mobile,address").get();
-          const realNameRes = await uniIdCo2.getRealNameInfo();
-          this.setUserInfo({
-            ...res.result.data[0],
-            realNameAuth: realNameRes
-          });
-        } catch (e) {
-          this.setUserInfo({}, { cover: true });
-          formatAppLog("error", "at uni_modules/uni-id-pages/common/store.js:60", e.message, e.errCode);
-        }
-      }
-    },
-    setUserInfo(data2, { cover } = { cover: false }) {
-      let userInfo = cover ? data2 : Object.assign(store.userInfo, data2);
-      store.userInfo = Object.assign({}, userInfo);
-      store.hasLogin = Object.keys(store.userInfo).length != 0;
-      uni.setStorageSync("uni-id-pages-userInfo", store.userInfo);
-      return data2;
-    },
-    async logout() {
-      if (nr.getCurrentUserInfo().tokenExpired > Date.now()) {
-        try {
-          await uniIdCo$b.logout();
-        } catch (e) {
-          formatAppLog("error", "at uni_modules/uni-id-pages/common/store.js:79", e);
-        }
-      }
-      uni.removeStorageSync("uni_id_token");
-      uni.setStorageSync("uni_id_token_expired", 0);
-      this.setUserInfo({}, { cover: true });
-      uni.$emit("uni-id-pages-logout");
-      uni.redirectTo({
-        url: `/${pagesJson.uniIdRouter && pagesJson.uniIdRouter.loginPage ? pagesJson.uniIdRouter.loginPage : "uni_modules/uni-id-pages/pages/login/login-withoutpwd"}`
-      });
-    },
-    loginBack(e = {}) {
-      const { uniIdRedirectUrl = "" } = e;
-      let delta = 0;
-      let pages2 = getCurrentPages();
-      pages2.forEach((page, index) => {
-        if (pages2[pages2.length - index - 1].route.split("/")[3] == "login") {
-          delta++;
-        }
-      });
-      if (uniIdRedirectUrl) {
-        return uni.redirectTo({
-          url: uniIdRedirectUrl,
-          fail: (err1) => {
-            uni.switchTab({
-              url: uniIdRedirectUrl,
-              fail: (err2) => {
-                formatAppLog("log", "at uni_modules/uni-id-pages/common/store.js:108", err1, err2);
-              }
-            });
-          }
-        });
-      }
-      if (delta) {
-        const page = pagesJson.pages[0];
-        return uni.reLaunch({
-          url: `/${page.path}`
-        });
-      }
-      uni.navigateBack({
-        delta
-      });
-    },
-    loginSuccess(e = {}) {
-      const {
-        showToast = true,
-        toastText = "登录成功",
-        autoBack = true,
-        uniIdRedirectUrl = "",
-        passwordConfirmed
-      } = e;
-      if (showToast) {
-        uni.showToast({
-          title: toastText,
-          icon: "none",
-          duration: 3e3
-        });
-      }
-      this.updateUserInfo();
-      uni.$emit("uni-id-pages-login-success");
-      if (config.setPasswordAfterLogin && !passwordConfirmed) {
-        return uni.redirectTo({
-          url: uniIdRedirectUrl ? `/uni_modules/uni-id-pages/pages/userinfo/set-pwd/set-pwd?uniIdRedirectUrl=${uniIdRedirectUrl}&loginType=${e.loginType}` : `/uni_modules/uni-id-pages/pages/userinfo/set-pwd/set-pwd?loginType=${e.loginType}`,
-          fail: (err2) => {
-            formatAppLog("log", "at uni_modules/uni-id-pages/common/store.js:153", err2);
-          }
-        });
-      }
-      if (autoBack) {
-        this.loginBack({ uniIdRedirectUrl });
-      }
-    }
-  };
-  const store = vue.reactive(data);
-  const mixin = {
-    data() {
-      return {
-        config,
-        uniIdRedirectUrl: "",
-        isMounted: false
-      };
-    },
-    onUnload() {
-    },
-    mounted() {
-      this.isMounted = true;
-    },
-    onLoad(e) {
-      if (e.is_weixin_redirect) {
-        uni.showLoading({
-          mask: true
-        });
-        if (window.location.href.includes("#")) {
-          const paramsArr = window.location.href.split("?")[1].split("&");
-          paramsArr.forEach((item) => {
-            const arr = item.split("=");
-            if (arr[0] == "code") {
-              e.code = arr[1];
-            }
-          });
-        }
-        this.$nextTick((n2) => {
-          this.$refs.uniFabLogin.login({
-            code: e.code
-          }, "weixin");
-        });
-      }
-      if (e.uniIdRedirectUrl) {
-        this.uniIdRedirectUrl = decodeURIComponent(e.uniIdRedirectUrl);
-      }
-    },
-    computed: {
-      needAgreements() {
-        if (this.isMounted) {
-          if (this.$refs.agreements) {
-            return this.$refs.agreements.needAgreements;
-          } else {
-            return false;
-          }
-        }
-      },
-      agree: {
-        get() {
-          if (this.isMounted) {
-            if (this.$refs.agreements) {
-              return this.$refs.agreements.isAgree;
-            } else {
-              return true;
-            }
-          }
-        },
-        set(agree) {
-          if (this.$refs.agreements) {
-            this.$refs.agreements.isAgree = agree;
-          } else {
-            formatAppLog("log", "at uni_modules/uni-id-pages/common/login-page.mixin.js:80", "不存在 隐私政策协议组件");
-          }
-        }
-      }
-    },
-    methods: {
-      loginSuccess(e) {
-        mutations.loginSuccess({
-          ...e,
-          uniIdRedirectUrl: this.uniIdRedirectUrl
-        });
-      }
-    }
-  };
-  const _imports_0$5 = "/static/logo.png";
-  const uniIdCo$a = nr.importObject("uni-id-co", {
-    errorOptions: {
-      type: "toast"
-    }
-  });
-  const _sfc_main$Z = {
-    mixins: [mixin],
-    data() {
-      return {
-        password: "",
-        username: "",
-        focusUsername: false,
-        focusPassword: false,
-        logo: "/static/logo.png"
-      };
-    },
-    onShow() {
-    },
-    methods: {
-      toRetrievePwd() {
-        uni.showToast({
-          icon: "error",
-          title: "该功能暂未实现"
-        });
-      },
-      pwdLogin() {
-        if (!this.username.length) {
-          this.focusUsername = true;
-          return uni.showToast({
-            title: "请输入用户名",
-            icon: "none",
-            duration: 3e3
-          });
-        }
-        if (!this.password.length) {
-          this.focusPassword = true;
-          return uni.showToast({
-            title: "请输入密码",
-            icon: "none",
-            duration: 3e3
-          });
-        }
-        if (this.needAgreements && !this.agree) {
-          return this.$refs.agreements.popup(this.pwdLogin);
-        }
-        let data2 = {
-          password: this.password
-        };
-        if (/^1\d{10}$/.test(this.username)) {
-          data2.mobile = this.username;
-        } else if (/@/.test(this.username)) {
-          data2.email = this.username;
-        } else {
-          data2.username = this.username;
-        }
-        uniIdCo$a.login(data2).then((e) => {
-          this.loginSuccess(e);
-          uni.showToast({
-            title: "登录成功",
-            icon: "success",
-            duration: 1e3
-          });
-          setTimeout(() => {
-            uni.switchTab({
-              url: "/pages/index/index"
-            });
-          }, 1e3);
-        }).catch((e) => {
-          formatAppLog("error", "at uni_modules/uni-id-pages/pages/login/login-withpwd.vue:117", "登录失败：", e);
-          let errorMessage = "登录失败，请重试";
-          if (e.errCode === "uni-id-captcha-required") {
-            errorMessage = "需要验证码登录，请稍后重试";
-          } else if (e.message) {
-            errorMessage = e.message;
-          }
-          uni.showToast({
-            title: errorMessage,
-            icon: "none",
-            duration: 3e3
-          });
-        });
-      },
-      toRegister() {
-        uni.navigateTo({
-          url: this.config.isAdmin ? "/uni_modules/uni-id-pages/pages/register/register-admin" : "/uni_modules/uni-id-pages/pages/register/register",
-          fail(e) {
-            formatAppLog("error", "at uni_modules/uni-id-pages/pages/login/login-withpwd.vue:139", e);
-          }
-        });
-      },
-      wechat() {
-        uni.navigateTo({
-          url: "/uni_modules/uni-id-pages/pages/login/login-withoutpwd"
-        });
-      }
-    }
-  };
-  function _sfc_render$Y(_ctx, _cache, $props, $setup, $data, $options) {
-    const _component_uni_easyinput = resolveEasycom(vue.resolveDynamicComponent("uni-easyinput"), __easycom_0$8);
-    const _component_uni_forms_item = resolveEasycom(vue.resolveDynamicComponent("uni-forms-item"), __easycom_1$3);
-    const _component_uni_forms = resolveEasycom(vue.resolveDynamicComponent("uni-forms"), __easycom_3$5);
-    return vue.openBlock(), vue.createElementBlock("view", { class: "login-container" }, [
-      vue.createElementVNode("view", { class: "login-content" }, [
-        vue.createElementVNode("view", { class: "login-logo" }, [
-          vue.createElementVNode("image", {
-            src: _imports_0$5,
-            mode: "widthFix",
-            class: "logo-image"
-          })
-        ]),
-        vue.createVNode(_component_uni_forms, { class: "form-container" }, {
-          default: vue.withCtx(() => [
-            vue.createVNode(_component_uni_forms_item, { name: "username" }, {
-              default: vue.withCtx(() => [
-                vue.createVNode(_component_uni_easyinput, {
-                  focus: $data.focusUsername,
-                  onBlur: _cache[0] || (_cache[0] = ($event) => $data.focusUsername = false),
-                  class: "input-box username-input",
-                  inputBorder: false,
-                  modelValue: $data.username,
-                  "onUpdate:modelValue": _cache[1] || (_cache[1] = ($event) => $data.username = $event),
-                  placeholder: "请输入用户名",
-                  trim: "all"
-                }, null, 8, ["focus", "modelValue"])
-              ]),
-              _: 1
-              /* STABLE */
-            }),
-            vue.createVNode(_component_uni_forms_item, { name: "password" }, {
-              default: vue.withCtx(() => [
-                vue.createVNode(_component_uni_easyinput, {
-                  focus: $data.focusPassword,
-                  onBlur: _cache[2] || (_cache[2] = ($event) => $data.focusPassword = false),
-                  class: "input-box password-input",
-                  clearable: "",
-                  type: "password",
-                  inputBorder: false,
-                  modelValue: $data.password,
-                  "onUpdate:modelValue": _cache[3] || (_cache[3] = ($event) => $data.password = $event),
-                  placeholder: "请输入密码",
-                  trim: "all"
-                }, null, 8, ["focus", "modelValue"])
-              ]),
-              _: 1
-              /* STABLE */
-            })
-          ]),
-          _: 1
-          /* STABLE */
-        }),
-        vue.createCommentVNode(' <button class="login-button" type="primary" @click="wechat">微信一键登录</button> '),
-        vue.createElementVNode("button", {
-          class: "login-button",
-          type: "primary",
-          onClick: _cache[4] || (_cache[4] = (...args) => $options.pwdLogin && $options.pwdLogin(...args))
-        }, "登录"),
-        vue.createElementVNode("view", { class: "link-container" }, [
-          !_ctx.config.isAdmin ? (vue.openBlock(), vue.createElementBlock("view", { key: 0 }, [
-            vue.createElementVNode("text", {
-              class: "link-text retrieve-pwd",
-              onClick: _cache[5] || (_cache[5] = (...args) => $options.toRetrievePwd && $options.toRetrievePwd(...args))
-            }, "忘记密码")
-          ])) : vue.createCommentVNode("v-if", true),
-          vue.createElementVNode(
-            "text",
-            {
-              class: "link-text register",
-              onClick: _cache[6] || (_cache[6] = (...args) => $options.toRegister && $options.toRegister(...args))
-            },
-            vue.toDisplayString(_ctx.config.isAdmin ? "注册管理员账号" : "注册账号"),
-            1
-            /* TEXT */
-          )
-        ])
-      ])
-    ]);
-  }
-  const UniModulesUniIdPagesPagesLoginLoginWithpwd = /* @__PURE__ */ _export_sfc(_sfc_main$Z, [["render", _sfc_render$Y], ["__file", "G:/mobile application development/pdd/uni_modules/uni-id-pages/pages/login/login-withpwd.vue"]]);
-  const _imports_1$5 = "/static/search.png";
-  const _imports_2$4 = "/static/camera.png";
-  const _sfc_main$Y = {
-    data() {
-      return {
-        currentTab: 0,
-        searchPlaceholder: "请输入商品信息",
-        categories: [],
-        allGoods: [],
-        currentTabData: [],
-        placeholderProducts: [],
-        specialItems: [
-          {
-            image: "/static/clock.png",
-            text: "限时秒杀",
-            url: "https://www.jd.com/"
-          },
-          {
-            image: "/static/recharge.png",
-            text: "话费充值",
-            url: "https://pro.jd.com/mall/active/4NgfTXqfdYhvRcmET8SMGCrRztHU/index.html?babelChannel=ttt12&innerAnchor=100119111653"
-          },
-          {
-            image: "/static/turntable.png",
-            text: "数码国补",
-            url: "https://pro.jd.com/mall/active/h7bbR7sFxP6thFYwDqxNWjAbh8K/index.html?babelChannel=ttt111"
-          },
-          {
-            image: "/static/sale.png",
-            text: "秒杀",
-            url: "https://pro.jd.com/mall/active/2hZ8idqu6mj9ZGR1LbPsd3MrW2i2/index.html?babelChannel=ttt3&innerAnchor=10136238481040"
-          },
-          {
-            image: "/static/money.png",
-            text: "便宜包邮",
-            url: "https://pro.jd.com/mall/active/3J13cRc4KPMNqXPVuVFY9aDKsBJy/index.html?babelChannel=ttt1"
-          }
-        ],
-        sections: [
-          {
-            title: "百亿补贴",
-            image: "/static/subsidy.png",
-            url: "/pages/subsidy/subsidy"
-          },
-          {
-            title: "多多买菜",
-            image: "/static/vegetables.png",
-            url: "/pages/buy-vegetables/buy-vegetables"
-          }
-        ],
-        pageNumber: 1,
-        pageSize: 100,
-        scrollHeight: "calc(100vh - 240rpx)",
-        isRefreshing: false,
-        cacheKey: "homePageData",
-        cacheExpiration: 5 * 60 * 1e6,
-        // 5分钟
-        userInfoChecked: false,
-        userInfoComplete: false,
-        // 新增：标记用户信息是否完整
-        isDataLoaded: false
-        // 新增：标记数据是否已加载
-      };
-    },
-    async onLoad() {
-      uni.getSystemInfo({
-        success: (res) => {
-          this.scrollHeight = `calc(100vh - ${res.statusBarHeight}px - 240rpx)`;
-        }
-      });
-      await this.checkUserInfoSync();
-      await this.getInitialData();
-    },
-    onShow() {
-      if (this.userInfoChecked && !this.userInfoComplete) {
-        this.checkUserInfo(true);
-      }
-    },
-    methods: {
-      // 新增：同步检查用户信息的方法
-      async checkUserInfoSync() {
-        formatAppLog("log", "at pages/index/index.vue:160", "开始同步检查用户信息");
-        if (!store.hasLogin) {
-          formatAppLog("log", "at pages/index/index.vue:164", "用户未登录，跳过信息检查");
-          this.userInfoChecked = true;
-          return;
-        }
-        let attempts = 0;
-        const maxAttempts = 20;
-        const waitTime = 2e3;
-        while (!store.userInfo && attempts < maxAttempts) {
-          formatAppLog("log", "at pages/index/index.vue:175", `等待用户信息加载，尝试 ${attempts + 1}/${maxAttempts}`);
-          await new Promise((resolve) => setTimeout(resolve, waitTime));
-          attempts++;
-        }
-        this.userInfoChecked = true;
-        if (!store.userInfo) {
-          formatAppLog("log", "at pages/index/index.vue:184", "用户信息加载超时或不存在");
-          this.userInfoComplete = false;
-          return;
-        }
-        formatAppLog("log", "at pages/index/index.vue:189", "检查用户信息:", store.userInfo);
-        const hasMobile = !!store.userInfo.mobile && store.userInfo.mobile.trim() !== "";
-        const hasAddress = !!store.userInfo.address && store.userInfo.address.trim() !== "";
-        formatAppLog("log", "at pages/index/index.vue:194", "用户信息检查结果:", {
-          hasMobile,
-          hasAddress
-        });
-        this.userInfoComplete = hasMobile && hasAddress;
-        if (!this.userInfoComplete) {
-          formatAppLog("log", "at pages/index/index.vue:202", "用户信息不完整，需要补充");
-          uni.showToast({
-            title: "请完善手机与收货地址",
-            icon: "none",
-            duration: 2e3
-          });
-          setTimeout(() => {
-            uni.navigateTo({
-              url: "/pages/user/set"
-            });
-          }, 2e3);
-        } else {
-          formatAppLog("log", "at pages/index/index.vue:216", "用户信息已完整");
-        }
-      },
-      // 保留原有方法，但主要用于onShow时的检查
-      checkUserInfo(silent = false) {
-        if (!store.hasLogin) {
-          formatAppLog("log", "at pages/index/index.vue:224", "用户未登录，跳过信息检查");
-          return;
-        }
-        const userInfo = store.userInfo;
-        if (!userInfo) {
-          formatAppLog("log", "at pages/index/index.vue:230", "用户信息不存在，跳过信息检查");
-          return;
-        }
-        formatAppLog("log", "at pages/index/index.vue:234", "检查用户信息:", JSON.stringify(userInfo));
-        const hasMobile = !!userInfo.mobile && userInfo.mobile.trim() !== "";
-        const hasAddress = !!userInfo.address && userInfo.address.trim() !== "";
-        formatAppLog("log", "at pages/index/index.vue:239", "用户信息检查结果:", {
-          hasMobile,
-          hasAddress
-        });
-        this.userInfoComplete = hasMobile && hasAddress;
-        if (this.userInfoComplete) {
-          formatAppLog("log", "at pages/index/index.vue:247", "用户信息已完整");
-          return true;
-        } else {
-          formatAppLog("log", "at pages/index/index.vue:250", "用户信息不完整，需要补充");
-          if (!silent) {
-            uni.showToast({
-              title: "请完善手机与收货地址",
-              icon: "none",
-              duration: 2e3
-            });
-            setTimeout(() => {
-              uni.navigateTo({
-                url: "/pages/user/set"
-              });
-            }, 2e3);
-          }
-          return false;
-        }
-      },
-      async getInitialData() {
-        try {
-          const cachedData = this.getCachedData();
-          if (cachedData) {
-            this.setPageData(cachedData);
-          } else {
-            await this.fetchAndCacheData();
-          }
-          this.switchTab(0);
-          this.isDataLoaded = true;
-        } catch (err2) {
-          formatAppLog("error", "at pages/index/index.vue:281", "初始化数据失败:", err2);
-          this.isDataLoaded = false;
-          throw err2;
-        }
-      },
-      getCachedData() {
-        const cachedData = uni.getStorageSync(this.cacheKey);
-        if (cachedData && Date.now() - cachedData.timestamp < this.cacheExpiration) {
-          return cachedData.data;
-        }
-        return null;
-      },
-      async fetchAndCacheData() {
-        try {
-          const {
-            result
-          } = await nr.callFunction({
-            name: "getHomePageData",
-            data: {
-              pageNumber: this.pageNumber,
-              pageSize: this.pageSize
-            }
-          });
-          if (result.success) {
-            this.setPageData(result.data);
-            this.cacheData(result.data);
-          } else {
-            throw new Error(result.error);
-          }
-        } catch (err2) {
-          formatAppLog("error", "at pages/index/index.vue:312", "获取数据失败:", err2);
-          throw err2;
-        }
-      },
-      setPageData(data2) {
-        this.categories = data2.categories || [];
-        this.allGoods = data2.goods || [];
-        if (this.allGoods.length > 0) {
-          this.searchPlaceholder = this.allGoods[Math.floor(Math.random() * this.allGoods.length)].keywords || "请输入商品信息";
-        }
-      },
-      cacheData(data2) {
-        uni.setStorageSync(this.cacheKey, {
-          timestamp: Date.now(),
-          data: data2
-        });
-      },
-      switchTab(index) {
-        this.currentTab = index;
-        const currentCategory = this.categories[index];
-        if (!currentCategory)
-          return;
-        if (index === 0) {
-          const shuffledGoods = [...this.allGoods].sort(() => Math.random() - 0.5);
-          this.currentTabData = shuffledGoods.slice(0, this.pageSize);
-          this.placeholderProducts = shuffledGoods.slice(this.pageSize - 80, this.pageSize + 5);
-        } else {
-          this.currentTabData = this.allGoods.filter((item) => parseInt(item.category_id) === parseInt(
-            currentCategory.sort
-          ));
-        }
-      },
-      navigateToSearch() {
-        uni.navigateTo({
-          url: "/pages/search/search"
-        });
-      },
-      navigateToPage(url) {
-        try {
-          if (false)
-            ;
-          else {
-            uni.navigateTo({
-              url: `/pages/webview/webview?url=${encodeURIComponent(url)}`
-            });
-          }
-        } catch (error) {
-          formatAppLog("error", "at pages/index/index.vue:361", "跳转失败:", error);
-        }
-      },
-      navigateToSection(index) {
-        const section = this.sections[index];
-        if (section) {
-          uni.navigateTo({
-            url: section.url
-          });
-        }
-      },
-      navigateToProduct(item) {
-        if (!item)
-          return;
-        uni.setStorage({
-          key: "currentProduct",
-          data: item,
-          success: () => {
-            formatAppLog("log", "at pages/index/index.vue:379", "商品信息存储成功", item);
-          }
-        });
-        uni.navigateTo({
-          url: "../search/mall-details"
-        });
-      },
-      onRefresh() {
-        formatAppLog("log", "at pages/index/index.vue:388", "正在刷新...");
-        this.isRefreshing = true;
-        this.fetchAndCacheData().then(() => {
-          this.switchTab(this.currentTab);
-          this.isRefreshing = false;
-        }).catch((error) => {
-          formatAppLog("error", "at pages/index/index.vue:394", "刷新失败:", error);
-          this.isRefreshing = false;
-        });
-      }
-    }
-  };
-  function _sfc_render$X(_ctx, _cache, $props, $setup, $data, $options) {
-    return vue.openBlock(), vue.createElementBlock("view", { class: "container" }, [
-      vue.createCommentVNode(" Fixed head section remains unchanged "),
-      vue.createElementVNode("view", { class: "fixed-head" }, [
-        vue.createElementVNode("view", { class: "search-container" }, [
-          vue.createElementVNode("view", {
-            class: "search-box",
-            onClick: _cache[0] || (_cache[0] = (...args) => $options.navigateToSearch && $options.navigateToSearch(...args))
-          }, [
-            vue.createElementVNode("image", {
-              class: "search-icon",
-              src: _imports_1$5,
-              mode: "aspectFit"
-            }),
-            vue.createElementVNode("input", {
-              class: "search-input",
-              type: "text",
-              placeholder: $data.searchPlaceholder
-            }, null, 8, ["placeholder"]),
-            vue.createElementVNode("image", {
-              class: "search-icon",
-              src: _imports_2$4,
-              mode: "aspectFit"
-            })
-          ])
-        ]),
-        vue.createElementVNode("view", { class: "tab-container" }, [
-          (vue.openBlock(true), vue.createElementBlock(
-            vue.Fragment,
-            null,
-            vue.renderList($data.categories, (tab, index) => {
-              return vue.openBlock(), vue.createElementBlock("view", {
-                key: index,
-                class: vue.normalizeClass(["tab-item", { active: $data.currentTab === index }]),
-                onClick: ($event) => $options.switchTab(index)
-              }, vue.toDisplayString(tab.name), 11, ["onClick"]);
-            }),
-            128
-            /* KEYED_FRAGMENT */
-          ))
-        ])
-      ]),
-      vue.createCommentVNode(" Scrollable content remains unchanged "),
-      vue.createElementVNode("scroll-view", {
-        "scroll-y": "",
-        class: "scroll-container",
-        style: vue.normalizeStyle({ height: $data.scrollHeight }),
-        onRefresherrefresh: _cache[1] || (_cache[1] = (...args) => $options.onRefresh && $options.onRefresh(...args)),
-        "refresher-enabled": "true",
-        "refresher-threshold": 100,
-        "refresher-default-style": "none",
-        "refresher-background": "#eee",
-        "lower-threshold": "0",
-        "refresher-triggered": $data.isRefreshing
-      }, [
-        $data.currentTab === 0 ? (vue.openBlock(), vue.createElementBlock(
-          vue.Fragment,
-          { key: 0 },
-          [
-            vue.createElementVNode("view", { class: "section-new" }, [
-              (vue.openBlock(true), vue.createElementBlock(
-                vue.Fragment,
-                null,
-                vue.renderList($data.specialItems, (item, index) => {
-                  return vue.openBlock(), vue.createElementBlock("view", {
-                    key: index,
-                    class: "common-item",
-                    onClick: ($event) => $options.navigateToPage(item.url)
-                  }, [
-                    vue.createElementVNode("image", {
-                      class: "section-image",
-                      src: item.image,
-                      mode: "aspectFit",
-                      "lazy-load": true
-                    }, null, 8, ["src"]),
-                    vue.createElementVNode(
-                      "text",
-                      { class: "section-text" },
-                      vue.toDisplayString(item.text),
-                      1
-                      /* TEXT */
-                    )
-                  ], 8, ["onClick"]);
-                }),
-                128
-                /* KEYED_FRAGMENT */
-              ))
-            ]),
-            (vue.openBlock(true), vue.createElementBlock(
-              vue.Fragment,
-              null,
-              vue.renderList($data.sections, (sectionData, sectionIndex) => {
-                return vue.openBlock(), vue.createElementBlock("view", {
-                  key: sectionIndex,
-                  class: "section",
-                  onClick: ($event) => $options.navigateToSection(sectionIndex)
-                }, [
-                  vue.createElementVNode("view", { class: "common-item" }, [
-                    vue.createElementVNode("image", {
-                      class: "section-image",
-                      src: sectionData.image,
-                      mode: "aspectFit",
-                      "lazy-load": true
-                    }, null, 8, ["src"]),
-                    vue.createElementVNode(
-                      "text",
-                      { class: "section-text-new" },
-                      vue.toDisplayString(sectionData.title),
-                      1
-                      /* TEXT */
-                    )
-                  ]),
-                  (vue.openBlock(true), vue.createElementBlock(
-                    vue.Fragment,
-                    null,
-                    vue.renderList($data.placeholderProducts.slice(sectionIndex * 4, (sectionIndex + 1) * 4), (product, productIndex) => {
-                      var _a;
-                      return vue.openBlock(), vue.createElementBlock("view", {
-                        key: productIndex,
-                        class: "common-item"
-                      }, [
-                        vue.createElementVNode("image", {
-                          class: "section-image",
-                          src: (_a = product.goods_thumb) == null ? void 0 : _a.fileID,
-                          mode: "aspectFit",
-                          "lazy-load": true
-                        }, null, 8, ["src"]),
-                        vue.createElementVNode(
-                          "text",
-                          {
-                            class: "price",
-                            style: { "color": "red" }
-                          },
-                          "¥" + vue.toDisplayString(product.price),
-                          1
-                          /* TEXT */
-                        )
-                      ]);
-                    }),
-                    128
-                    /* KEYED_FRAGMENT */
-                  ))
-                ], 8, ["onClick"]);
-              }),
-              128
-              /* KEYED_FRAGMENT */
-            ))
-          ],
-          64
-          /* STABLE_FRAGMENT */
-        )) : vue.createCommentVNode("v-if", true),
-        vue.createElementVNode("view", { class: "content" }, [
-          $data.currentTab !== null ? (vue.openBlock(), vue.createElementBlock("view", {
-            key: 0,
-            class: "tab-content"
-          }, [
-            (vue.openBlock(true), vue.createElementBlock(
-              vue.Fragment,
-              null,
-              vue.renderList($data.currentTabData, (item, index) => {
-                var _a;
-                return vue.openBlock(), vue.createElementBlock("view", {
-                  key: index,
-                  class: "content-item",
-                  onClick: ($event) => $options.navigateToProduct(item)
-                }, [
-                  vue.createElementVNode("view", { class: "product-card" }, [
-                    vue.createElementVNode("image", {
-                      class: "item-image",
-                      src: (_a = item.goods_thumb) == null ? void 0 : _a.fileID,
-                      mode: "aspectFit",
-                      "lazy-load": true
-                    }, null, 8, ["src"]),
-                    vue.createElementVNode("view", { class: "product-info" }, [
-                      vue.createElementVNode(
-                        "text",
-                        { class: "item-title" },
-                        vue.toDisplayString(item.name),
-                        1
-                        /* TEXT */
-                      ),
-                      vue.createElementVNode("view", { class: "service-tags" }, [
-                        vue.createElementVNode("text", { class: "tag pay-later" }, "先用后付"),
-                        vue.createElementVNode("text", { class: "tag quick-refund" }, "极速退款")
-                      ]),
-                      vue.createElementVNode("view", { class: "price-row" }, [
-                        vue.createElementVNode(
-                          "text",
-                          { class: "price" },
-                          "¥" + vue.toDisplayString(item.price),
-                          1
-                          /* TEXT */
-                        ),
-                        vue.createElementVNode(
-                          "text",
-                          { class: "sales" },
-                          "全店已拼" + vue.toDisplayString(item.total_sell_count) + "+件",
-                          1
-                          /* TEXT */
-                        )
-                      ])
-                    ])
-                  ])
-                ], 8, ["onClick"]);
-              }),
-              128
-              /* KEYED_FRAGMENT */
-            ))
-          ])) : (vue.openBlock(), vue.createElementBlock("view", {
-            key: 1,
-            class: "loading"
-          }, "加载中..."))
-        ])
-      ], 44, ["refresher-triggered"])
-    ]);
-  }
-  const PagesIndexIndex = /* @__PURE__ */ _export_sfc(_sfc_main$Y, [["render", _sfc_render$X], ["__file", "G:/mobile application development/pdd/pages/index/index.vue"]]);
-  const { passwordStrength } = config;
-  const passwordRules = {
-    // 密码必须包含大小写字母、数字和特殊符号
-    super: /^(?=.*[0-9])(?=.*[a-z])(?=.*[A-Z])(?=.*[~!@#$%^&*_\-+=`|\\(){}[\]:;"'<>,.?/])[0-9a-zA-Z~!@#$%^&*_\-+=`|\\(){}[\]:;"'<>,.?/]{8,16}$/,
-    // 密码必须包含字母、数字和特殊符号
-    strong: /^(?=.*[0-9])(?=.*[a-zA-Z])(?=.*[~!@#$%^&*_\-+=`|\\(){}[\]:;"'<>,.?/])[0-9a-zA-Z~!@#$%^&*_\-+=`|\\(){}[\]:;"'<>,.?/]{8,16}$/,
-    // 密码必须为字母、数字和特殊符号任意两种的组合
-    medium: /^(?![0-9]+$)(?![a-zA-Z]+$)(?![~!@#$%^&*_\-+=`|\\(){}[\]:;"'<>,.?/]+$)[0-9a-zA-Z~!@#$%^&*_\-+=`|\\(){}[\]:;"'<>,.?/]{8,16}$/,
-    // 密码必须包含字母和数字
-    weak: /^(?=.*[0-9])(?=.*[a-zA-Z])[0-9a-zA-Z~!@#$%^&*_\-+=`|\\(){}[\]:;"'<>,.?/]{6,16}$/
-  };
-  const ERROR = {
-    normal: {
-      noPwd: "请输入密码",
-      noRePwd: "再次输入密码",
-      rePwdErr: "两次输入密码不一致"
-    },
-    passwordStrengthError: {
-      super: "密码必须包含大小写字母、数字和特殊符号，密码长度必须在8-16位之间",
-      strong: "密码必须包含字母、数字和特殊符号，密码长度必须在8-16位之间",
-      medium: "密码必须为字母、数字和特殊符号任意两种的组合，密码长度必须在8-16位之间",
-      weak: "密码必须包含字母，密码长度必须在6-16位之间"
-    }
-  };
-  function validPwd(password) {
-    if (passwordStrength && passwordRules[passwordStrength]) {
-      if (!new RegExp(passwordRules[passwordStrength]).test(password)) {
-        return ERROR.passwordStrengthError[passwordStrength];
-      }
-    }
-    return true;
-  }
-  function getPwdRules(pwdName = "password", rePwdName = "password2") {
-    const rules2 = {};
-    rules2[pwdName] = {
-      rules: [
-        {
-          required: true,
-          errorMessage: ERROR.normal.noPwd
-        },
-        {
-          validateFunction: function(rule, value, data2, callback) {
-            const checkRes = validPwd(value);
-            if (checkRes !== true) {
-              callback(checkRes);
-            }
-            return true;
-          }
-        }
-      ]
-    };
-    if (rePwdName) {
-      rules2[rePwdName] = {
-        rules: [
-          {
-            required: true,
-            errorMessage: ERROR.normal.noRePwd
-          },
-          {
-            validateFunction: function(rule, value, data2, callback) {
-              if (value != data2[pwdName]) {
-                callback(ERROR.normal.rePwdErr);
-              }
-              return true;
-            }
-          }
-        ]
-      };
-    }
-    return rules2;
-  }
-  const passwordMod = {
-    ERROR,
-    validPwd,
-    getPwdRules
-  };
-  const rules = {
-    "username": {
-      "rules": [
-        {
-          required: true,
-          errorMessage: "请输入用户名"
-        },
-        {
-          minLength: 3,
-          maxLength: 32,
-          errorMessage: "用户名长度在 {minLength} 到 {maxLength} 个字符"
-        },
-        {
-          validateFunction: function(rule, value, data2, callback) {
-            if (/^1\d{10}$/.test(value) || /^(\w-*\.*)+@(\w-?)+(\.\w{2,})+$/.test(value)) {
-              callback("用户名不能是：手机号或邮箱");
-            }
-            if (/^\d+$/.test(value)) {
-              callback("用户名不能为纯数字");
-            }
-            if (/[\u4E00-\u9FA5\uF900-\uFA2D]{1,}/.test(value)) {
-              callback("用户名不能包含中文");
-            }
-            return true;
-          }
-        }
-      ],
-      "label": "用户名"
-    },
-    "nickname": {
-      "rules": [
-        {
-          minLength: 3,
-          maxLength: 32,
-          errorMessage: "昵称长度在 {minLength} 到 {maxLength} 个字符"
-        },
-        {
-          validateFunction: function(rule, value, data2, callback) {
-            if (/^1\d{10}$/.test(value) || /^(\w-*\.*)+@(\w-?)+(\.\w{2,})+$/.test(value)) {
-              callback("昵称不能是：手机号或邮箱");
-            }
-            if (/^\d+$/.test(value)) {
-              callback("昵称不能为纯数字");
-            }
-            if (/[\u4E00-\u9FA5\uF900-\uFA2D]{1,}/.test(value)) {
-              callback("昵称不能包含中文");
-            }
-            return true;
-          }
-        }
-      ],
-      "label": "昵称"
-    },
-    ...passwordMod.getPwdRules()
-  };
-  const uniIdCo$9 = nr.importObject("uni-id-co");
-  const _sfc_main$X = {
-    mixins: [mixin],
-    data() {
-      return {
-        formData: {
-          username: "",
-          password: "",
-          password2: ""
-        },
-        rules,
-        focusUsername: false,
-        focusPassword: false,
-        focusPassword2: false,
-        logo: "/static/logo.png"
-      };
-    },
-    onReady() {
-      this.$refs.form.setRules(this.rules);
-    },
-    onShow() {
-    },
-    methods: {
-      submit() {
-        this.$refs.form.validate().then((res) => {
-          if (this.needAgreements && !this.agree) {
-            return this.$refs.agreements.popup(() => {
-              this.submitForm(res);
-            });
-          }
-          this.submitForm(res);
-        }).catch((errors) => {
-          let key = errors[0].key;
-          key = key.replace(key[0], key[0].toUpperCase());
-          this["focus" + key] = true;
-        });
-      },
-      submitForm(params) {
-        uniIdCo$9.registerUser(this.formData).then((e) => {
-          this.loginSuccess(e);
-          uni.showToast({
-            title: "注册成功",
-            icon: "success",
-            duration: 2e3
-          });
-          setTimeout(() => {
-            uni.redirectTo({
-              url: "/uni_modules/uni-id-pages/pages/login/login-withpwd"
-            });
-          }, 2e3);
-        }).catch((e) => {
-          formatAppLog("error", "at uni_modules/uni-id-pages/pages/register/register.vue:122", "注册失败：", e);
-          let errorMessage = "注册失败，请重试";
-          if (e.msg) {
-            errorMessage = e.msg;
-          }
-          uni.showToast({
-            title: errorMessage,
-            icon: "none",
-            duration: 3e3
-          });
-        });
-      },
-      navigateBack() {
-        uni.navigateBack();
-      },
-      toLogin() {
-        uni.navigateTo({
-          url: "/uni_modules/uni-id-pages/pages/login/login-withpwd"
-        });
-      },
-      registerByEmail() {
-        uni.navigateTo({
-          url: "/uni_modules/uni-id-pages/pages/register/register-by-email"
-        });
-      }
-    }
-  };
-  function _sfc_render$W(_ctx, _cache, $props, $setup, $data, $options) {
-    const _component_uni_easyinput = resolveEasycom(vue.resolveDynamicComponent("uni-easyinput"), __easycom_0$8);
-    const _component_uni_forms_item = resolveEasycom(vue.resolveDynamicComponent("uni-forms-item"), __easycom_1$3);
-    const _component_uni_forms = resolveEasycom(vue.resolveDynamicComponent("uni-forms"), __easycom_3$5);
-    return vue.openBlock(), vue.createElementBlock("view", { class: "login-container" }, [
-      vue.createElementVNode("view", { class: "login-content" }, [
-        vue.createElementVNode("view", { class: "login-logo" }, [
-          vue.createElementVNode("image", {
-            src: _imports_0$5,
-            mode: "widthFix",
-            class: "logo-image"
-          })
-        ]),
-        vue.createVNode(_component_uni_forms, {
-          class: "form-container",
-          ref: "form",
-          value: $data.formData,
-          rules: $data.rules,
-          "validate-trigger": "submit",
-          "err-show-type": "toast"
-        }, {
-          default: vue.withCtx(() => [
-            vue.createVNode(_component_uni_forms_item, {
-              name: "username",
-              required: ""
-            }, {
-              default: vue.withCtx(() => [
-                vue.createVNode(_component_uni_easyinput, {
-                  focus: $data.focusUsername,
-                  onBlur: _cache[0] || (_cache[0] = ($event) => $data.focusUsername = false),
-                  class: "input-box username-input",
-                  inputBorder: false,
-                  placeholder: "请输入用户名",
-                  modelValue: $data.formData.username,
-                  "onUpdate:modelValue": _cache[1] || (_cache[1] = ($event) => $data.formData.username = $event),
-                  trim: "both"
-                }, null, 8, ["focus", "modelValue"])
-              ]),
-              _: 1
-              /* STABLE */
-            }),
-            vue.createVNode(_component_uni_forms_item, {
-              name: "password",
-              required: ""
-            }, {
-              default: vue.withCtx(() => [
-                vue.createVNode(_component_uni_easyinput, {
-                  focus: $data.focusPassword,
-                  onBlur: _cache[2] || (_cache[2] = ($event) => $data.focusPassword = false),
-                  class: "input-box password-input",
-                  maxlength: "20",
-                  placeholder: "请输入" + (_ctx.config.passwordStrength == "weak" ? "6" : "8") + "-16位密码",
-                  type: "password",
-                  modelValue: $data.formData.password,
-                  "onUpdate:modelValue": _cache[3] || (_cache[3] = ($event) => $data.formData.password = $event),
-                  trim: "both"
-                }, null, 8, ["focus", "placeholder", "modelValue"])
-              ]),
-              _: 1
-              /* STABLE */
-            }),
-            vue.createVNode(_component_uni_forms_item, {
-              name: "password2",
-              required: ""
-            }, {
-              default: vue.withCtx(() => [
-                vue.createVNode(_component_uni_easyinput, {
-                  focus: $data.focusPassword2,
-                  onBlur: _cache[4] || (_cache[4] = ($event) => $data.focusPassword2 = false),
-                  class: "input-box password-input",
-                  maxlength: "20",
-                  placeholder: "再次输入密码",
-                  type: "password",
-                  modelValue: $data.formData.password2,
-                  "onUpdate:modelValue": _cache[5] || (_cache[5] = ($event) => $data.formData.password2 = $event),
-                  trim: "both"
-                }, null, 8, ["focus", "modelValue"])
-              ]),
-              _: 1
-              /* STABLE */
-            }),
-            vue.createElementVNode("button", {
-              class: "login-button",
-              type: "primary",
-              onClick: _cache[6] || (_cache[6] = (...args) => $options.submit && $options.submit(...args))
-            }, "注册"),
-            vue.createElementVNode("button", {
-              class: "register-back",
-              onClick: _cache[7] || (_cache[7] = (...args) => $options.navigateBack && $options.navigateBack(...args))
-            }, "返回")
-          ]),
-          _: 1
-          /* STABLE */
-        }, 8, ["value", "rules"])
-      ])
-    ]);
-  }
-  const UniModulesUniIdPagesPagesRegisterRegister = /* @__PURE__ */ _export_sfc(_sfc_main$X, [["render", _sfc_render$W], ["__file", "G:/mobile application development/pdd/uni_modules/uni-id-pages/pages/register/register.vue"]]);
-  const popup = {
-    data() {
-      return {};
-    },
-    created() {
-      this.popup = this.getParent();
-    },
-    methods: {
-      /**
-       * 获取父元素实例
-       */
-      getParent(name = "uniPopup") {
-        let parent = this.$parent;
-        let parentName = parent.$options.name;
-        while (parentName !== name) {
-          parent = parent.$parent;
-          if (!parent)
-            return false;
-          parentName = parent.$options.name;
-        }
-        return parent;
-      }
-    }
-  };
-  const isObject = (val) => val !== null && typeof val === "object";
-  const defaultDelimiters = ["{", "}"];
-  class BaseFormatter {
-    constructor() {
-      this._caches = /* @__PURE__ */ Object.create(null);
-    }
-    interpolate(message, values, delimiters = defaultDelimiters) {
-      if (!values) {
-        return [message];
-      }
-      let tokens = this._caches[message];
-      if (!tokens) {
-        tokens = parse(message, delimiters);
-        this._caches[message] = tokens;
-      }
-      return compile(tokens, values);
-    }
-  }
-  const RE_TOKEN_LIST_VALUE = /^(?:\d)+/;
-  const RE_TOKEN_NAMED_VALUE = /^(?:\w)+/;
-  function parse(format, [startDelimiter, endDelimiter]) {
-    const tokens = [];
-    let position = 0;
-    let text = "";
-    while (position < format.length) {
-      let char = format[position++];
-      if (char === startDelimiter) {
-        if (text) {
-          tokens.push({ type: "text", value: text });
-        }
-        text = "";
-        let sub = "";
-        char = format[position++];
-        while (char !== void 0 && char !== endDelimiter) {
-          sub += char;
-          char = format[position++];
-        }
-        const isClosed = char === endDelimiter;
-        const type = RE_TOKEN_LIST_VALUE.test(sub) ? "list" : isClosed && RE_TOKEN_NAMED_VALUE.test(sub) ? "named" : "unknown";
-        tokens.push({ value: sub, type });
-      } else {
-        text += char;
-      }
-    }
-    text && tokens.push({ type: "text", value: text });
-    return tokens;
-  }
-  function compile(tokens, values) {
-    const compiled = [];
-    let index = 0;
-    const mode = Array.isArray(values) ? "list" : isObject(values) ? "named" : "unknown";
-    if (mode === "unknown") {
-      return compiled;
-    }
-    while (index < tokens.length) {
-      const token = tokens[index];
-      switch (token.type) {
-        case "text":
-          compiled.push(token.value);
-          break;
-        case "list":
-          compiled.push(values[parseInt(token.value, 10)]);
-          break;
-        case "named":
-          if (mode === "named") {
-            compiled.push(values[token.value]);
-          } else {
-            {
-              console.warn(`Type of token '${token.type}' and format of value '${mode}' don't match!`);
-            }
-          }
-          break;
-        case "unknown":
-          {
-            console.warn(`Detect 'unknown' type of token!`);
-          }
-          break;
-      }
-      index++;
-    }
-    return compiled;
-  }
-  const LOCALE_ZH_HANS = "zh-Hans";
-  const LOCALE_ZH_HANT = "zh-Hant";
-  const LOCALE_EN = "en";
-  const LOCALE_FR = "fr";
-  const LOCALE_ES = "es";
-  const hasOwnProperty = Object.prototype.hasOwnProperty;
-  const hasOwn = (val, key) => hasOwnProperty.call(val, key);
-  const defaultFormatter = new BaseFormatter();
-  function include(str, parts) {
-    return !!parts.find((part) => str.indexOf(part) !== -1);
-  }
-  function startsWith(str, parts) {
-    return parts.find((part) => str.indexOf(part) === 0);
-  }
-  function normalizeLocale(locale, messages2) {
-    if (!locale) {
-      return;
-    }
-    locale = locale.trim().replace(/_/g, "-");
-    if (messages2 && messages2[locale]) {
-      return locale;
-    }
-    locale = locale.toLowerCase();
-    if (locale === "chinese") {
-      return LOCALE_ZH_HANS;
-    }
-    if (locale.indexOf("zh") === 0) {
-      if (locale.indexOf("-hans") > -1) {
-        return LOCALE_ZH_HANS;
-      }
-      if (locale.indexOf("-hant") > -1) {
-        return LOCALE_ZH_HANT;
-      }
-      if (include(locale, ["-tw", "-hk", "-mo", "-cht"])) {
-        return LOCALE_ZH_HANT;
-      }
-      return LOCALE_ZH_HANS;
-    }
-    let locales = [LOCALE_EN, LOCALE_FR, LOCALE_ES];
-    if (messages2 && Object.keys(messages2).length > 0) {
-      locales = Object.keys(messages2);
-    }
-    const lang = startsWith(locale, locales);
-    if (lang) {
-      return lang;
-    }
-  }
-  class I18n {
-    constructor({ locale, fallbackLocale, messages: messages2, watcher, formater: formater2 }) {
-      this.locale = LOCALE_EN;
-      this.fallbackLocale = LOCALE_EN;
-      this.message = {};
-      this.messages = {};
-      this.watchers = [];
-      if (fallbackLocale) {
-        this.fallbackLocale = fallbackLocale;
-      }
-      this.formater = formater2 || defaultFormatter;
-      this.messages = messages2 || {};
-      this.setLocale(locale || LOCALE_EN);
-      if (watcher) {
-        this.watchLocale(watcher);
-      }
-    }
-    setLocale(locale) {
-      const oldLocale = this.locale;
-      this.locale = normalizeLocale(locale, this.messages) || this.fallbackLocale;
-      if (!this.messages[this.locale]) {
-        this.messages[this.locale] = {};
-      }
-      this.message = this.messages[this.locale];
-      if (oldLocale !== this.locale) {
-        this.watchers.forEach((watcher) => {
-          watcher(this.locale, oldLocale);
-        });
-      }
-    }
-    getLocale() {
-      return this.locale;
-    }
-    watchLocale(fn) {
-      const index = this.watchers.push(fn) - 1;
-      return () => {
-        this.watchers.splice(index, 1);
-      };
-    }
-    add(locale, message, override = true) {
-      const curMessages = this.messages[locale];
-      if (curMessages) {
-        if (override) {
-          Object.assign(curMessages, message);
-        } else {
-          Object.keys(message).forEach((key) => {
-            if (!hasOwn(curMessages, key)) {
-              curMessages[key] = message[key];
-            }
-          });
-        }
-      } else {
-        this.messages[locale] = message;
-      }
-    }
-    f(message, values, delimiters) {
-      return this.formater.interpolate(message, values, delimiters).join("");
-    }
-    t(key, locale, values) {
-      let message = this.message;
-      if (typeof locale === "string") {
-        locale = normalizeLocale(locale, this.messages);
-        locale && (message = this.messages[locale]);
-      } else {
-        values = locale;
-      }
-      if (!hasOwn(message, key)) {
-        console.warn(`Cannot translate the value of keypath ${key}. Use the value of keypath as default.`);
-        return key;
-      }
-      return this.formater.interpolate(message[key], values).join("");
-    }
-  }
-  function watchAppLocale(appVm, i18n) {
-    if (appVm.$watchLocale) {
-      appVm.$watchLocale((newLocale) => {
-        i18n.setLocale(newLocale);
-      });
-    } else {
-      appVm.$watch(() => appVm.$locale, (newLocale) => {
-        i18n.setLocale(newLocale);
-      });
-    }
-  }
-  function getDefaultLocale() {
-    if (typeof uni !== "undefined" && uni.getLocale) {
-      return uni.getLocale();
-    }
-    if (typeof global !== "undefined" && global.getLocale) {
-      return global.getLocale();
-    }
-    return LOCALE_EN;
-  }
-  function initVueI18n(locale, messages2 = {}, fallbackLocale, watcher) {
-    if (typeof locale !== "string") {
-      const options = [
-        messages2,
-        locale
-      ];
-      locale = options[0];
-      messages2 = options[1];
-    }
-    if (typeof locale !== "string") {
-      locale = getDefaultLocale();
-    }
-    if (typeof fallbackLocale !== "string") {
-      fallbackLocale = typeof __uniConfig !== "undefined" && __uniConfig.fallbackLocale || LOCALE_EN;
-    }
-    const i18n = new I18n({
-      locale,
-      fallbackLocale,
-      messages: messages2,
-      watcher
-    });
-    let t2 = (key, values) => {
-      if (typeof getApp !== "function") {
-        t2 = function(key2, values2) {
-          return i18n.t(key2, values2);
-        };
-      } else {
-        let isWatchedAppLocale = false;
-        t2 = function(key2, values2) {
-          const appVm = getApp().$vm;
-          if (appVm) {
-            appVm.$locale;
-            if (!isWatchedAppLocale) {
-              isWatchedAppLocale = true;
-              watchAppLocale(appVm, i18n);
-            }
-          }
-          return i18n.t(key2, values2);
-        };
-      }
-      return t2(key, values);
-    };
-    return {
-      i18n,
-      f(message, values, delimiters) {
-        return i18n.f(message, values, delimiters);
-      },
-      t(key, values) {
-        return t2(key, values);
-      },
-      add(locale2, message, override = true) {
-        return i18n.add(locale2, message, override);
-      },
-      watch(fn) {
-        return i18n.watchLocale(fn);
-      },
-      getLocale() {
-        return i18n.getLocale();
-      },
-      setLocale(newLocale) {
-        return i18n.setLocale(newLocale);
-      }
-    };
-  }
-  const en$2 = {
-    "uni-popup.cancel": "cancel",
-    "uni-popup.ok": "ok",
-    "uni-popup.placeholder": "pleace enter",
-    "uni-popup.title": "Hint",
-    "uni-popup.shareTitle": "Share to"
-  };
-  const zhHans$2 = {
-    "uni-popup.cancel": "取消",
-    "uni-popup.ok": "确定",
-    "uni-popup.placeholder": "请输入",
-    "uni-popup.title": "提示",
-    "uni-popup.shareTitle": "分享到"
-  };
-  const zhHant$2 = {
-    "uni-popup.cancel": "取消",
-    "uni-popup.ok": "確定",
-    "uni-popup.placeholder": "請輸入",
-    "uni-popup.title": "提示",
-    "uni-popup.shareTitle": "分享到"
-  };
-  const messages$2 = {
-    en: en$2,
-    "zh-Hans": zhHans$2,
-    "zh-Hant": zhHant$2
-  };
-  const {
-    t: t$2
-  } = initVueI18n(messages$2);
-  const _sfc_main$W = {
-    name: "uniPopupDialog",
-    mixins: [popup],
-    emits: ["confirm", "close", "update:modelValue", "input"],
-    props: {
-      inputType: {
-        type: String,
-        default: "text"
-      },
-      showClose: {
-        type: Boolean,
-        default: true
-      },
-      modelValue: {
-        type: [Number, String],
-        default: ""
-      },
-      placeholder: {
-        type: [String, Number],
-        default: ""
-      },
-      type: {
-        type: String,
-        default: "error"
-      },
-      mode: {
-        type: String,
-        default: "base"
-      },
-      title: {
-        type: String,
-        default: ""
-      },
-      content: {
-        type: String,
-        default: ""
-      },
-      beforeClose: {
-        type: Boolean,
-        default: false
-      },
-      cancelText: {
-        type: String,
-        default: ""
-      },
-      confirmText: {
-        type: String,
-        default: ""
-      },
-      maxlength: {
-        type: Number,
-        default: -1
-      },
-      focus: {
-        type: Boolean,
-        default: true
-      }
-    },
-    data() {
-      return {
-        dialogType: "error",
-        val: ""
-      };
-    },
-    computed: {
-      okText() {
-        return this.confirmText || t$2("uni-popup.ok");
-      },
-      closeText() {
-        return this.cancelText || t$2("uni-popup.cancel");
-      },
-      placeholderText() {
-        return this.placeholder || t$2("uni-popup.placeholder");
-      },
-      titleText() {
-        return this.title || t$2("uni-popup.title");
-      }
-    },
-    watch: {
-      type(val) {
-        this.dialogType = val;
-      },
-      mode(val) {
-        if (val === "input") {
-          this.dialogType = "info";
-        }
-      },
-      value(val) {
-        setVal(val);
-      },
-      modelValue(val) {
-        setVal(val);
-      },
-      val(val) {
-        this.$emit("update:modelValue", val);
-      }
-    },
-    created() {
-      this.popup.disableMask();
-      if (this.mode === "input") {
-        this.dialogType = "info";
-        this.val = this.value;
-        this.val = this.modelValue;
-      } else {
-        this.dialogType = this.type;
-      }
-    },
-    methods: {
-      /**
-       * 给val属性赋值
-       */
-      setVal(val) {
-        if (this.maxlength != -1 && this.mode === "input") {
-          this.val = val.slice(0, this.maxlength);
-        } else {
-          this.val = val;
-        }
-      },
-      /**
-       * 点击确认按钮
-       */
-      onOk() {
-        if (this.mode === "input") {
-          this.$emit("confirm", this.val);
-        } else {
-          this.$emit("confirm");
-        }
-        if (this.beforeClose)
-          return;
-        this.popup.close();
-      },
-      /**
-       * 点击取消按钮
-       */
-      closeDialog() {
-        this.$emit("close");
-        if (this.beforeClose)
-          return;
-        this.popup.close();
-      },
-      close() {
-        this.popup.close();
-      }
-    }
-  };
-  function _sfc_render$V(_ctx, _cache, $props, $setup, $data, $options) {
-    return vue.openBlock(), vue.createElementBlock("view", { class: "uni-popup-dialog" }, [
-      vue.createElementVNode("view", { class: "uni-dialog-title" }, [
-        vue.createElementVNode(
-          "text",
-          {
-            class: vue.normalizeClass(["uni-dialog-title-text", ["uni-popup__" + $data.dialogType]])
-          },
-          vue.toDisplayString($options.titleText),
-          3
-          /* TEXT, CLASS */
-        )
-      ]),
-      $props.mode === "base" ? (vue.openBlock(), vue.createElementBlock("view", {
-        key: 0,
-        class: "uni-dialog-content"
-      }, [
-        vue.renderSlot(_ctx.$slots, "default", {}, () => [
-          vue.createElementVNode(
-            "text",
-            { class: "uni-dialog-content-text" },
-            vue.toDisplayString($props.content),
-            1
-            /* TEXT */
-          )
-        ], true)
-      ])) : (vue.openBlock(), vue.createElementBlock("view", {
-        key: 1,
-        class: "uni-dialog-content"
-      }, [
-        vue.renderSlot(_ctx.$slots, "default", {}, () => [
-          vue.withDirectives(vue.createElementVNode("input", {
-            class: "uni-dialog-input",
-            maxlength: $props.maxlength,
-            "onUpdate:modelValue": _cache[0] || (_cache[0] = ($event) => $data.val = $event),
-            type: $props.inputType,
-            placeholder: $options.placeholderText,
-            focus: $props.focus
-          }, null, 8, ["maxlength", "type", "placeholder", "focus"]), [
-            [vue.vModelDynamic, $data.val]
-          ])
-        ], true)
-      ])),
-      vue.createElementVNode("view", { class: "uni-dialog-button-group" }, [
-        $props.showClose ? (vue.openBlock(), vue.createElementBlock("view", {
-          key: 0,
-          class: "uni-dialog-button",
-          onClick: _cache[1] || (_cache[1] = (...args) => $options.closeDialog && $options.closeDialog(...args))
-        }, [
-          vue.createElementVNode(
-            "text",
-            { class: "uni-dialog-button-text" },
-            vue.toDisplayString($options.closeText),
-            1
-            /* TEXT */
-          )
-        ])) : vue.createCommentVNode("v-if", true),
-        vue.createElementVNode(
-          "view",
-          {
-            class: vue.normalizeClass(["uni-dialog-button", $props.showClose ? "uni-border-left" : ""]),
-            onClick: _cache[2] || (_cache[2] = (...args) => $options.onOk && $options.onOk(...args))
-          },
-          [
-            vue.createElementVNode(
-              "text",
-              { class: "uni-dialog-button-text uni-button-color" },
-              vue.toDisplayString($options.okText),
-              1
-              /* TEXT */
-            )
-          ],
-          2
-          /* CLASS */
-        )
-      ])
-    ]);
-  }
-  const __easycom_3$4 = /* @__PURE__ */ _export_sfc(_sfc_main$W, [["render", _sfc_render$V], ["__scopeId", "data-v-d78c88b7"], ["__file", "G:/mobile application development/pdd/uni_modules/uni-popup/components/uni-popup-dialog/uni-popup-dialog.vue"]]);
-  class MPAnimation {
-    constructor(options, _this) {
-      this.options = options;
-      this.animation = uni.createAnimation({
-        ...options
-      });
-      this.currentStepAnimates = {};
-      this.next = 0;
-      this.$ = _this;
-    }
-    _nvuePushAnimates(type, args) {
-      let aniObj = this.currentStepAnimates[this.next];
-      let styles = {};
-      if (!aniObj) {
-        styles = {
-          styles: {},
-          config: {}
-        };
-      } else {
-        styles = aniObj;
-      }
-      if (animateTypes1.includes(type)) {
-        if (!styles.styles.transform) {
-          styles.styles.transform = "";
-        }
-        let unit = "";
-        if (type === "rotate") {
-          unit = "deg";
-        }
-        styles.styles.transform += `${type}(${args + unit}) `;
-      } else {
-        styles.styles[type] = `${args}`;
-      }
-      this.currentStepAnimates[this.next] = styles;
-    }
-    _animateRun(styles = {}, config2 = {}) {
-      let ref = this.$.$refs["ani"].ref;
-      if (!ref)
-        return;
-      return new Promise((resolve, reject) => {
-        nvueAnimation.transition(ref, {
-          styles,
-          ...config2
-        }, (res) => {
-          resolve();
-        });
-      });
-    }
-    _nvueNextAnimate(animates, step = 0, fn) {
-      let obj = animates[step];
-      if (obj) {
-        let {
-          styles,
-          config: config2
-        } = obj;
-        this._animateRun(styles, config2).then(() => {
-          step += 1;
-          this._nvueNextAnimate(animates, step, fn);
-        });
-      } else {
-        this.currentStepAnimates = {};
-        typeof fn === "function" && fn();
-        this.isEnd = true;
-      }
-    }
-    step(config2 = {}) {
-      this.animation.step(config2);
-      return this;
-    }
-    run(fn) {
-      this.$.animationData = this.animation.export();
-      this.$.timer = setTimeout(() => {
-        typeof fn === "function" && fn();
-      }, this.$.durationTime);
-    }
-  }
-  const animateTypes1 = [
-    "matrix",
-    "matrix3d",
-    "rotate",
-    "rotate3d",
-    "rotateX",
-    "rotateY",
-    "rotateZ",
-    "scale",
-    "scale3d",
-    "scaleX",
-    "scaleY",
-    "scaleZ",
-    "skew",
-    "skewX",
-    "skewY",
-    "translate",
-    "translate3d",
-    "translateX",
-    "translateY",
-    "translateZ"
-  ];
-  const animateTypes2 = ["opacity", "backgroundColor"];
-  const animateTypes3 = ["width", "height", "left", "right", "top", "bottom"];
-  animateTypes1.concat(animateTypes2, animateTypes3).forEach((type) => {
-    MPAnimation.prototype[type] = function(...args) {
-      this.animation[type](...args);
-      return this;
-    };
-  });
-  function createAnimation(option, _this) {
-    if (!_this)
-      return;
-    clearTimeout(_this.timer);
-    return new MPAnimation(option, _this);
-  }
-  const _sfc_main$V = {
-    name: "uniTransition",
-    emits: ["click", "change"],
-    props: {
-      show: {
-        type: Boolean,
-        default: false
-      },
-      modeClass: {
-        type: [Array, String],
-        default() {
-          return "fade";
-        }
-      },
-      duration: {
-        type: Number,
-        default: 300
-      },
-      styles: {
-        type: Object,
-        default() {
-          return {};
-        }
-      },
-      customClass: {
-        type: String,
-        default: ""
-      },
-      onceRender: {
-        type: Boolean,
-        default: false
-      }
-    },
-    data() {
-      return {
-        isShow: false,
-        transform: "",
-        opacity: 1,
-        animationData: {},
-        durationTime: 300,
-        config: {}
-      };
-    },
-    watch: {
-      show: {
-        handler(newVal) {
-          if (newVal) {
-            this.open();
-          } else {
-            if (this.isShow) {
-              this.close();
-            }
-          }
-        },
-        immediate: true
-      }
-    },
-    computed: {
-      // 生成样式数据
-      stylesObject() {
-        let styles = {
-          ...this.styles,
-          "transition-duration": this.duration / 1e3 + "s"
-        };
-        let transform = "";
-        for (let i2 in styles) {
-          let line = this.toLine(i2);
-          transform += line + ":" + styles[i2] + ";";
-        }
-        return transform;
-      },
-      // 初始化动画条件
-      transformStyles() {
-        return "transform:" + this.transform + ";opacity:" + this.opacity + ";" + this.stylesObject;
-      }
-    },
-    created() {
-      this.config = {
-        duration: this.duration,
-        timingFunction: "ease",
-        transformOrigin: "50% 50%",
-        delay: 0
-      };
-      this.durationTime = this.duration;
-    },
-    methods: {
-      /**
-       *  ref 触发 初始化动画
-       */
-      init(obj = {}) {
-        if (obj.duration) {
-          this.durationTime = obj.duration;
-        }
-        this.animation = createAnimation(Object.assign(this.config, obj), this);
-      },
-      /**
-       * 点击组件触发回调
-       */
-      onClick() {
-        this.$emit("click", {
-          detail: this.isShow
-        });
-      },
-      /**
-       * ref 触发 动画分组
-       * @param {Object} obj
-       */
-      step(obj, config2 = {}) {
-        if (!this.animation)
-          return;
-        for (let i2 in obj) {
-          try {
-            if (typeof obj[i2] === "object") {
-              this.animation[i2](...obj[i2]);
-            } else {
-              this.animation[i2](obj[i2]);
-            }
-          } catch (e) {
-            formatAppLog("error", "at uni_modules/uni-transition/components/uni-transition/uni-transition.vue:148", `方法 ${i2} 不存在`);
-          }
-        }
-        this.animation.step(config2);
-        return this;
-      },
-      /**
-       *  ref 触发 执行动画
-       */
-      run(fn) {
-        if (!this.animation)
-          return;
-        this.animation.run(fn);
-      },
-      // 开始过度动画
-      open() {
-        clearTimeout(this.timer);
-        this.transform = "";
-        this.isShow = true;
-        let { opacity, transform } = this.styleInit(false);
-        if (typeof opacity !== "undefined") {
-          this.opacity = opacity;
-        }
-        this.transform = transform;
-        this.$nextTick(() => {
-          this.timer = setTimeout(() => {
-            this.animation = createAnimation(this.config, this);
-            this.tranfromInit(false).step();
-            this.animation.run(() => {
-              this.transform = "";
-              this.opacity = opacity || 1;
-            });
-            this.$emit("change", {
-              detail: this.isShow
-            });
-          }, 20);
-        });
-      },
-      // 关闭过度动画
-      close(type) {
-        if (!this.animation)
-          return;
-        this.tranfromInit(true).step().run(() => {
-          this.isShow = false;
-          this.animationData = null;
-          this.animation = null;
-          let { opacity, transform } = this.styleInit(false);
-          this.opacity = opacity || 1;
-          this.transform = transform;
-          this.$emit("change", {
-            detail: this.isShow
-          });
-        });
-      },
-      // 处理动画开始前的默认样式
-      styleInit(type) {
-        let styles = {
-          transform: ""
-        };
-        let buildStyle = (type2, mode) => {
-          if (mode === "fade") {
-            styles.opacity = this.animationType(type2)[mode];
-          } else {
-            styles.transform += this.animationType(type2)[mode] + " ";
-          }
-        };
-        if (typeof this.modeClass === "string") {
-          buildStyle(type, this.modeClass);
-        } else {
-          this.modeClass.forEach((mode) => {
-            buildStyle(type, mode);
-          });
-        }
-        return styles;
-      },
-      // 处理内置组合动画
-      tranfromInit(type) {
-        let buildTranfrom = (type2, mode) => {
-          let aniNum = null;
-          if (mode === "fade") {
-            aniNum = type2 ? 0 : 1;
-          } else {
-            aniNum = type2 ? "-100%" : "0";
-            if (mode === "zoom-in") {
-              aniNum = type2 ? 0.8 : 1;
-            }
-            if (mode === "zoom-out") {
-              aniNum = type2 ? 1.2 : 1;
-            }
-            if (mode === "slide-right") {
-              aniNum = type2 ? "100%" : "0";
-            }
-            if (mode === "slide-bottom") {
-              aniNum = type2 ? "100%" : "0";
-            }
-          }
-          this.animation[this.animationMode()[mode]](aniNum);
-        };
-        if (typeof this.modeClass === "string") {
-          buildTranfrom(type, this.modeClass);
-        } else {
-          this.modeClass.forEach((mode) => {
-            buildTranfrom(type, mode);
-          });
-        }
-        return this.animation;
-      },
-      animationType(type) {
-        return {
-          fade: type ? 0 : 1,
-          "slide-top": `translateY(${type ? "0" : "-100%"})`,
-          "slide-right": `translateX(${type ? "0" : "100%"})`,
-          "slide-bottom": `translateY(${type ? "0" : "100%"})`,
-          "slide-left": `translateX(${type ? "0" : "-100%"})`,
-          "zoom-in": `scaleX(${type ? 1 : 0.8}) scaleY(${type ? 1 : 0.8})`,
-          "zoom-out": `scaleX(${type ? 1 : 1.2}) scaleY(${type ? 1 : 1.2})`
-        };
-      },
-      // 内置动画类型与实际动画对应字典
-      animationMode() {
-        return {
-          fade: "opacity",
-          "slide-top": "translateY",
-          "slide-right": "translateX",
-          "slide-bottom": "translateY",
-          "slide-left": "translateX",
-          "zoom-in": "scale",
-          "zoom-out": "scale"
-        };
-      },
-      // 驼峰转中横线
-      toLine(name) {
-        return name.replace(/([A-Z])/g, "-$1").toLowerCase();
-      }
-    }
-  };
-  function _sfc_render$U(_ctx, _cache, $props, $setup, $data, $options) {
-    return vue.withDirectives((vue.openBlock(), vue.createElementBlock("view", {
-      ref: "ani",
-      animation: $data.animationData,
-      class: vue.normalizeClass($props.customClass),
-      style: vue.normalizeStyle($options.transformStyles),
-      onClick: _cache[0] || (_cache[0] = (...args) => $options.onClick && $options.onClick(...args))
-    }, [
-      vue.renderSlot(_ctx.$slots, "default")
-    ], 14, ["animation"])), [
-      [vue.vShow, $data.isShow]
-    ]);
-  }
-  const __easycom_0$7 = /* @__PURE__ */ _export_sfc(_sfc_main$V, [["render", _sfc_render$U], ["__file", "G:/mobile application development/pdd/uni_modules/uni-transition/components/uni-transition/uni-transition.vue"]]);
-  const _sfc_main$U = {
-    name: "uniPopup",
-    components: {},
-    emits: ["change", "maskClick"],
-    props: {
-      // 开启动画
-      animation: {
-        type: Boolean,
-        default: true
-      },
-      // 弹出层类型，可选值，top: 顶部弹出层；bottom：底部弹出层；center：全屏弹出层
-      // message: 消息提示 ; dialog : 对话框
-      type: {
-        type: String,
-        default: "center"
-      },
-      // maskClick
-      isMaskClick: {
-        type: Boolean,
-        default: null
-      },
-      // TODO 2 个版本后废弃属性 ，使用 isMaskClick
-      maskClick: {
-        type: Boolean,
-        default: null
-      },
-      backgroundColor: {
-        type: String,
-        default: "none"
-      },
-      safeArea: {
-        type: Boolean,
-        default: true
-      },
-      maskBackgroundColor: {
-        type: String,
-        default: "rgba(0, 0, 0, 0.4)"
-      },
-      borderRadius: {
-        type: String
-      }
-    },
-    watch: {
-      /**
-       * 监听type类型
-       */
-      type: {
-        handler: function(type) {
-          if (!this.config[type])
-            return;
-          this[this.config[type]](true);
-        },
-        immediate: true
-      },
-      isDesktop: {
-        handler: function(newVal) {
-          if (!this.config[newVal])
-            return;
-          this[this.config[this.type]](true);
-        },
-        immediate: true
-      },
-      /**
-       * 监听遮罩是否可点击
-       * @param {Object} val
-       */
-      maskClick: {
-        handler: function(val) {
-          this.mkclick = val;
-        },
-        immediate: true
-      },
-      isMaskClick: {
-        handler: function(val) {
-          this.mkclick = val;
-        },
-        immediate: true
-      },
-      // H5 下禁止底部滚动
-      showPopup(show) {
-      }
-    },
-    data() {
-      return {
-        duration: 300,
-        ani: [],
-        showPopup: false,
-        showTrans: false,
-        popupWidth: 0,
-        popupHeight: 0,
-        config: {
-          top: "top",
-          bottom: "bottom",
-          center: "center",
-          left: "left",
-          right: "right",
-          message: "top",
-          dialog: "center",
-          share: "bottom"
-        },
-        maskClass: {
-          position: "fixed",
-          bottom: 0,
-          top: 0,
-          left: 0,
-          right: 0,
-          backgroundColor: "rgba(0, 0, 0, 0.4)"
-        },
-        transClass: {
-          backgroundColor: "transparent",
-          borderRadius: this.borderRadius || "0",
-          position: "fixed",
-          left: 0,
-          right: 0
-        },
-        maskShow: true,
-        mkclick: true,
-        popupstyle: "top"
-      };
-    },
-    computed: {
-      getStyles() {
-        let res = { backgroundColor: this.bg };
-        if (this.borderRadius || "0") {
-          res = Object.assign(res, { borderRadius: this.borderRadius });
-        }
-        return res;
-      },
-      isDesktop() {
-        return this.popupWidth >= 500 && this.popupHeight >= 500;
-      },
-      bg() {
-        if (this.backgroundColor === "" || this.backgroundColor === "none") {
-          return "transparent";
-        }
-        return this.backgroundColor;
-      }
-    },
-    mounted() {
-      const fixSize = () => {
-        const {
-          windowWidth,
-          windowHeight,
-          windowTop,
-          safeArea,
-          screenHeight,
-          safeAreaInsets
-        } = uni.getSystemInfoSync();
-        this.popupWidth = windowWidth;
-        this.popupHeight = windowHeight + (windowTop || 0);
-        if (safeArea && this.safeArea) {
-          this.safeAreaInsets = safeAreaInsets.bottom;
-        } else {
-          this.safeAreaInsets = 0;
-        }
-      };
-      fixSize();
-    },
-    // TODO vue3
-    unmounted() {
-      this.setH5Visible();
-    },
-    activated() {
-      this.setH5Visible(!this.showPopup);
-    },
-    deactivated() {
-      this.setH5Visible(true);
-    },
-    created() {
-      if (this.isMaskClick === null && this.maskClick === null) {
-        this.mkclick = true;
-      } else {
-        this.mkclick = this.isMaskClick !== null ? this.isMaskClick : this.maskClick;
-      }
-      if (this.animation) {
-        this.duration = 300;
-      } else {
-        this.duration = 0;
-      }
-      this.messageChild = null;
-      this.clearPropagation = false;
-      this.maskClass.backgroundColor = this.maskBackgroundColor;
-    },
-    methods: {
-      setH5Visible(visible = true) {
-      },
-      /**
-       * 公用方法，不显示遮罩层
-       */
-      closeMask() {
-        this.maskShow = false;
-      },
-      /**
-       * 公用方法，遮罩层禁止点击
-       */
-      disableMask() {
-        this.mkclick = false;
-      },
-      // TODO nvue 取消冒泡
-      clear(e) {
-        e.stopPropagation();
-        this.clearPropagation = true;
-      },
-      open(direction) {
-        if (this.showPopup) {
-          return;
-        }
-        let innerType = ["top", "center", "bottom", "left", "right", "message", "dialog", "share"];
-        if (!(direction && innerType.indexOf(direction) !== -1)) {
-          direction = this.type;
-        }
-        if (!this.config[direction]) {
-          formatAppLog("error", "at uni_modules/uni-popup/components/uni-popup/uni-popup.vue:310", "缺少类型：", direction);
-          return;
-        }
-        this[this.config[direction]]();
-        this.$emit("change", {
-          show: true,
-          type: direction
-        });
-      },
-      close(type) {
-        this.showTrans = false;
-        this.$emit("change", {
-          show: false,
-          type: this.type
-        });
-        clearTimeout(this.timer);
-        this.timer = setTimeout(() => {
-          this.showPopup = false;
-        }, 300);
-      },
-      // TODO 处理冒泡事件，头条的冒泡事件有问题 ，先这样兼容
-      touchstart() {
-        this.clearPropagation = false;
-      },
-      onTap() {
-        if (this.clearPropagation) {
-          this.clearPropagation = false;
-          return;
-        }
-        this.$emit("maskClick");
-        if (!this.mkclick)
-          return;
-        this.close();
-      },
-      /**
-       * 顶部弹出样式处理
-       */
-      top(type) {
-        this.popupstyle = this.isDesktop ? "fixforpc-top" : "top";
-        this.ani = ["slide-top"];
-        this.transClass = {
-          position: "fixed",
-          left: 0,
-          right: 0,
-          backgroundColor: this.bg,
-          borderRadius: this.borderRadius || "0"
-        };
-        if (type)
-          return;
-        this.showPopup = true;
-        this.showTrans = true;
-        this.$nextTick(() => {
-          this.showPoptrans();
-          if (this.messageChild && this.type === "message") {
-            this.messageChild.timerClose();
-          }
-        });
-      },
-      /**
-       * 底部弹出样式处理
-       */
-      bottom(type) {
-        this.popupstyle = "bottom";
-        this.ani = ["slide-bottom"];
-        this.transClass = {
-          position: "fixed",
-          left: 0,
-          right: 0,
-          bottom: 0,
-          paddingBottom: this.safeAreaInsets + "px",
-          backgroundColor: this.bg,
-          borderRadius: this.borderRadius || "0"
-        };
-        if (type)
-          return;
-        this.showPoptrans();
-      },
-      /**
-       * 中间弹出样式处理
-       */
-      center(type) {
-        this.popupstyle = "center";
-        this.ani = ["zoom-out", "fade"];
-        this.transClass = {
-          position: "fixed",
-          display: "flex",
-          flexDirection: "column",
-          bottom: 0,
-          left: 0,
-          right: 0,
-          top: 0,
-          justifyContent: "center",
-          alignItems: "center",
-          borderRadius: this.borderRadius || "0"
-        };
-        if (type)
-          return;
-        this.showPoptrans();
-      },
-      left(type) {
-        this.popupstyle = "left";
-        this.ani = ["slide-left"];
-        this.transClass = {
-          position: "fixed",
-          left: 0,
-          bottom: 0,
-          top: 0,
-          backgroundColor: this.bg,
-          borderRadius: this.borderRadius || "0",
-          display: "flex",
-          flexDirection: "column"
-        };
-        if (type)
-          return;
-        this.showPoptrans();
-      },
-      right(type) {
-        this.popupstyle = "right";
-        this.ani = ["slide-right"];
-        this.transClass = {
-          position: "fixed",
-          bottom: 0,
-          right: 0,
-          top: 0,
-          backgroundColor: this.bg,
-          borderRadius: this.borderRadius || "0",
-          display: "flex",
-          flexDirection: "column"
-        };
-        if (type)
-          return;
-        this.showPoptrans();
-      },
-      showPoptrans() {
-        this.$nextTick(() => {
-          this.showPopup = true;
-          this.showTrans = true;
-        });
-      }
-    }
-  };
-  function _sfc_render$T(_ctx, _cache, $props, $setup, $data, $options) {
-    const _component_uni_transition = resolveEasycom(vue.resolveDynamicComponent("uni-transition"), __easycom_0$7);
-    return $data.showPopup ? (vue.openBlock(), vue.createElementBlock(
-      "view",
-      {
-        key: 0,
-        class: vue.normalizeClass(["uni-popup", [$data.popupstyle, $options.isDesktop ? "fixforpc-z-index" : ""]])
-      },
-      [
-        vue.createElementVNode(
-          "view",
-          {
-            onTouchstart: _cache[1] || (_cache[1] = (...args) => $options.touchstart && $options.touchstart(...args))
-          },
-          [
-            $data.maskShow ? (vue.openBlock(), vue.createBlock(_component_uni_transition, {
-              key: "1",
-              name: "mask",
-              "mode-class": "fade",
-              styles: $data.maskClass,
-              duration: $data.duration,
-              show: $data.showTrans,
-              onClick: $options.onTap
-            }, null, 8, ["styles", "duration", "show", "onClick"])) : vue.createCommentVNode("v-if", true),
-            vue.createVNode(_component_uni_transition, {
-              key: "2",
-              "mode-class": $data.ani,
-              name: "content",
-              styles: $data.transClass,
-              duration: $data.duration,
-              show: $data.showTrans,
-              onClick: $options.onTap
-            }, {
-              default: vue.withCtx(() => [
-                vue.createElementVNode(
-                  "view",
-                  {
-                    class: vue.normalizeClass(["uni-popup__wrapper", [$data.popupstyle]]),
-                    style: vue.normalizeStyle($options.getStyles),
-                    onClick: _cache[0] || (_cache[0] = (...args) => $options.clear && $options.clear(...args))
-                  },
-                  [
-                    vue.renderSlot(_ctx.$slots, "default", {}, void 0, true)
-                  ],
-                  6
-                  /* CLASS, STYLE */
-                )
-              ]),
-              _: 3
-              /* FORWARDED */
-            }, 8, ["mode-class", "styles", "duration", "show", "onClick"])
-          ],
-          32
-          /* NEED_HYDRATION */
-        )
-      ],
-      2
-      /* CLASS */
-    )) : vue.createCommentVNode("v-if", true);
-  }
-  const __easycom_0$6 = /* @__PURE__ */ _export_sfc(_sfc_main$U, [["render", _sfc_render$T], ["__scopeId", "data-v-4dd3c44b"], ["__file", "G:/mobile application development/pdd/uni_modules/uni-popup/components/uni-popup/uni-popup.vue"]]);
-  let retryFun = () => formatAppLog("log", "at uni_modules/uni-id-pages/components/uni-id-pages-agreements/uni-id-pages-agreements.vue:34", "为定义");
-  const _sfc_main$T = {
-    name: "uni-agreements",
-    computed: {
-      agreements() {
-        if (!config.agreements) {
-          return [];
-        }
-        let { serviceUrl, privacyUrl } = config.agreements;
-        return [
-          {
-            url: serviceUrl,
-            title: "用户服务协议"
-          },
-          {
-            url: privacyUrl,
-            title: "隐私政策条款"
-          }
-        ];
-      }
-    },
-    props: {
-      scope: {
-        type: String,
-        default() {
-          return "register";
-        }
-      }
-    },
-    methods: {
-      popupConfirm() {
-        this.isAgree = true;
-        retryFun();
-      },
-      popup(Fun) {
-        this.needPopupAgreements = true;
-        this.$nextTick(() => {
-          if (Fun) {
-            retryFun = Fun;
-          }
-          this.$refs.popupAgreement.open();
-        });
-      },
-      navigateTo({
-        url,
-        title
-      }) {
-        uni.navigateTo({
-          url: "/uni_modules/uni-id-pages/pages/common/webview/webview?url=" + url + "&title=" + title,
-          success: (res) => {
-          },
-          fail: () => {
-          },
-          complete: () => {
-          }
-        });
-      },
-      hasAnd(agreements, index) {
-        return agreements.length - 1 > index;
-      },
-      setAgree(e) {
-        this.isAgree = !this.isAgree;
-        this.$emit("setAgree", this.isAgree);
-      }
-    },
-    created() {
-      var _a;
-      this.needAgreements = (((_a = config == null ? void 0 : config.agreements) == null ? void 0 : _a.scope) || []).includes(this.scope);
-    },
-    data() {
-      return {
-        isAgree: false,
-        needAgreements: true,
-        needPopupAgreements: false
-      };
-    }
-  };
-  function _sfc_render$S(_ctx, _cache, $props, $setup, $data, $options) {
-    const _component_uni_popup_dialog = resolveEasycom(vue.resolveDynamicComponent("uni-popup-dialog"), __easycom_3$4);
-    const _component_uni_popup = resolveEasycom(vue.resolveDynamicComponent("uni-popup"), __easycom_0$6);
-    return $options.agreements.length ? (vue.openBlock(), vue.createElementBlock("view", {
-      key: 0,
-      class: "root"
-    }, [
-      $data.needAgreements ? (vue.openBlock(), vue.createElementBlock(
-        vue.Fragment,
-        { key: 0 },
-        [
-          vue.createElementVNode(
-            "checkbox-group",
-            {
-              onChange: _cache[0] || (_cache[0] = (...args) => $options.setAgree && $options.setAgree(...args))
-            },
-            [
-              vue.createElementVNode("label", { class: "checkbox-box" }, [
-                vue.createElementVNode("checkbox", {
-                  checked: $data.isAgree,
-                  style: { "transform": "scale(0.5)", "margin-right": "-6px" }
-                }, null, 8, ["checked"]),
-                vue.createElementVNode("text", { class: "text" }, "同意")
-              ])
-            ],
-            32
-            /* NEED_HYDRATION */
-          ),
-          vue.createElementVNode("view", { class: "content" }, [
-            (vue.openBlock(true), vue.createElementBlock(
-              vue.Fragment,
-              null,
-              vue.renderList($options.agreements, (agreement, index) => {
-                return vue.openBlock(), vue.createElementBlock("view", {
-                  class: "item",
-                  key: index
-                }, [
-                  vue.createElementVNode("text", {
-                    class: "agreement text",
-                    onClick: ($event) => $options.navigateTo(agreement)
-                  }, vue.toDisplayString(agreement.title), 9, ["onClick"]),
-                  $options.hasAnd($options.agreements, index) ? (vue.openBlock(), vue.createElementBlock("text", {
-                    key: 0,
-                    class: "text and",
-                    space: "nbsp"
-                  }, " 和 ")) : vue.createCommentVNode("v-if", true)
-                ]);
-              }),
-              128
-              /* KEYED_FRAGMENT */
-            ))
-          ])
-        ],
-        64
-        /* STABLE_FRAGMENT */
-      )) : vue.createCommentVNode("v-if", true),
-      vue.createCommentVNode(" 弹出式 "),
-      $data.needAgreements || $data.needPopupAgreements ? (vue.openBlock(), vue.createBlock(
-        _component_uni_popup,
-        {
-          key: 1,
-          ref: "popupAgreement",
-          type: "center"
-        },
-        {
-          default: vue.withCtx(() => [
-            vue.createVNode(_component_uni_popup_dialog, {
-              confirmText: "同意",
-              onConfirm: $options.popupConfirm
-            }, {
-              default: vue.withCtx(() => [
-                vue.createElementVNode("view", { class: "content" }, [
-                  vue.createElementVNode("text", { class: "text" }, "请先阅读并同意"),
-                  (vue.openBlock(true), vue.createElementBlock(
-                    vue.Fragment,
-                    null,
-                    vue.renderList($options.agreements, (agreement, index) => {
-                      return vue.openBlock(), vue.createElementBlock("view", {
-                        class: "item",
-                        key: index
-                      }, [
-                        vue.createElementVNode("text", {
-                          class: "agreement text",
-                          onClick: ($event) => $options.navigateTo(agreement)
-                        }, vue.toDisplayString(agreement.title), 9, ["onClick"]),
-                        $options.hasAnd($options.agreements, index) ? (vue.openBlock(), vue.createElementBlock("text", {
-                          key: 0,
-                          class: "text and",
-                          space: "nbsp"
-                        }, " 和 ")) : vue.createCommentVNode("v-if", true)
-                      ]);
-                    }),
-                    128
-                    /* KEYED_FRAGMENT */
-                  ))
-                ])
-              ]),
-              _: 1
-              /* STABLE */
-            }, 8, ["onConfirm"])
-          ]),
-          _: 1
-          /* STABLE */
-        },
-        512
-        /* NEED_PATCH */
-      )) : vue.createCommentVNode("v-if", true)
-    ])) : vue.createCommentVNode("v-if", true);
-  }
-  const __easycom_5$2 = /* @__PURE__ */ _export_sfc(_sfc_main$T, [["render", _sfc_render$S], ["__scopeId", "data-v-40b82fe9"], ["__file", "G:/mobile application development/pdd/uni_modules/uni-id-pages/components/uni-id-pages-agreements/uni-id-pages-agreements.vue"]]);
-  const _sfc_main$S = {
-    computed: {
-      agreements() {
-        if (!config.agreements) {
-          return [];
-        }
-        let {
-          serviceUrl,
-          privacyUrl
-        } = config.agreements;
-        return [
-          {
-            url: serviceUrl,
-            title: "用户服务协议"
-          },
-          {
-            url: privacyUrl,
-            title: "隐私政策条款"
-          }
-        ];
-      },
-      agree: {
-        get() {
-          return this.getParentComponent().agree;
-        },
-        set(agree) {
-          return this.getParentComponent().agree = agree;
-        }
-      }
-    },
-    data() {
-      return {
-        servicesList: [
-          {
-            "id": "username",
-            "text": "账号登录",
-            "logo": "/uni_modules/uni-id-pages/static/login/uni-fab-login/user.png",
-            "path": "/uni_modules/uni-id-pages/pages/login/login-withpwd"
-          },
-          {
-            "id": "smsCode",
-            "text": "短信验证码",
-            "logo": "/uni_modules/uni-id-pages/static/login/uni-fab-login/sms.png",
-            "path": "/uni_modules/uni-id-pages/pages/login/login-withoutpwd?type=smsCode"
-          },
-          {
-            "id": "weixin",
-            "text": "微信登录",
-            "logo": "/uni_modules/uni-id-pages/static/login/uni-fab-login/weixin.png"
-          },
-          {
-            "id": "huawei",
-            "text": "华为登录",
-            "logo": "/uni_modules/uni-id-pages/static/login/uni-fab-login/huawei.png",
-            "path": "/uni_modules/uni-id-pages/pages/login/login-withoutpwd?type=huawei"
-          },
-          {
-            "id": "huaweiMobile",
-            "text": "华为账号一键登录",
-            "logo": "/uni_modules/uni-id-pages/static/login/uni-fab-login/huawei.png",
-            "path": "/uni_modules/uni-id-pages/pages/login/login-withoutpwd?type=huaweiMobile"
-          },
-          {
-            "id": "apple",
-            "text": "苹果登录",
-            "logo": "/uni_modules/uni-id-pages/static/uni-fab-login/apple.png"
-          },
-          {
-            "id": "univerify",
-            "text": "一键登录",
-            "logo": "/uni_modules/uni-id-pages/static/app/uni-fab-login/univerify.png"
-          },
-          {
-            "id": "taobao",
-            "text": "淘宝登录",
-            //暂未提供该登录方式的接口示例
-            "logo": "/uni_modules/uni-id-pages/static/app/uni-fab-login/taobao.png"
-          },
-          {
-            "id": "facebook",
-            "text": "脸书登录",
-            //暂未提供该登录方式的接口示例
-            "logo": "/uni_modules/uni-id-pages/static/app/uni-fab-login/facebook.png"
-          },
-          {
-            "id": "alipay",
-            "text": "支付宝登录",
-            //暂未提供该登录方式的接口示例
-            "logo": "/uni_modules/uni-id-pages/static/app/uni-fab-login/alipay.png"
-          },
-          {
-            "id": "qq",
-            "text": "QQ登录",
-            //暂未提供该登录方式的接口示例
-            "logo": "/uni_modules/uni-id-pages/static/app/uni-fab-login/qq.png"
-          },
-          {
-            "id": "google",
-            "text": "谷歌登录",
-            //暂未提供该登录方式的接口示例
-            "logo": "/uni_modules/uni-id-pages/static/app/uni-fab-login/google.png"
-          },
-          {
-            "id": "douyin",
-            "text": "抖音登录",
-            //暂未提供该登录方式的接口示例
-            "logo": "/uni_modules/uni-id-pages/static/app/uni-fab-login/douyin.png"
-          },
-          {
-            "id": "sinaweibo",
-            "text": "新浪微博",
-            //暂未提供该登录方式的接口示例
-            "logo": "/uni_modules/uni-id-pages/static/app/uni-fab-login/sinaweibo.png"
-          }
-        ],
-        univerifyStyle: {
-          //一键登录弹出窗的样式配置参数
-          "fullScreen": true,
-          // 是否全屏显示，true表示全屏模式，false表示非全屏模式，默认值为false。
-          "backgroundColor": "#ffffff",
-          // 授权页面背景颜色，默认值：#ffffff
-          "buttons": {
-            // 自定义登录按钮
-            "iconWidth": "45px",
-            // 图标宽度（高度等比例缩放） 默认值：45px
-            "list": []
-          },
-          "privacyTerms": {
-            "defaultCheckBoxState": false,
-            // 条款勾选框初始状态 默认值： true
-            "textColor": "#BBBBBB",
-            // 文字颜色 默认值：#BBBBBB
-            "termsColor": "#5496E3",
-            //  协议文字颜色 默认值： #5496E3
-            "prefix": "我已阅读并同意",
-            // 条款前的文案 默认值：“我已阅读并同意”
-            "suffix": "并使用本机号码登录",
-            // 条款后的文案 默认值：“并使用本机号码登录”
-            "privacyItems": []
-          }
-        }
-      };
-    },
-    watch: {
-      agree(agree) {
-        this.univerifyStyle.privacyTerms.defaultCheckBoxState = agree;
-      }
-    },
-    async created() {
-      let servicesList = this.servicesList;
-      let loginTypes = config.loginTypes;
-      servicesList = servicesList.filter((item) => {
-        if (item.id == "apple" && uni.getSystemInfoSync().osName != "ios") {
-          return false;
-        }
-        return loginTypes.includes(item.id);
-      });
-      if (loginTypes.includes("univerify")) {
-        this.univerifyStyle.privacyTerms.privacyItems = this.agreements;
-        servicesList.forEach(({
-          id,
-          logo,
-          path
-        }) => {
-          if (id != "univerify") {
-            this.univerifyStyle.buttons.list.push({
-              "iconPath": logo,
-              "provider": id,
-              path
-              //路径用于点击快捷按钮时判断是跳转页面
-            });
-          }
-        });
-      }
-      this.servicesList = servicesList.filter((item) => {
-        let path = item.path ? item.path.split("?")[0] : "";
-        return path != this.getRoute(1);
-      });
-    },
-    methods: {
-      getParentComponent() {
-        return this.$parent;
-      },
-      setUserInfo(e) {
-        formatAppLog("log", "at uni_modules/uni-id-pages/components/uni-id-pages-fab-login/uni-id-pages-fab-login.vue:207", "setUserInfo", e);
-      },
-      getRoute(n2 = 0) {
-        let pages2 = getCurrentPages();
-        if (n2 > pages2.length) {
-          return "";
-        }
-        return "/" + pages2[pages2.length - n2].route;
-      },
-      toPage(path, index = 0) {
-        formatAppLog("log", "at uni_modules/uni-id-pages/components/uni-id-pages-fab-login/uni-id-pages-fab-login.vue:217", "比较", this.getRoute(1), this.getRoute(2), path);
-        if (this.getRoute(1) == path.split("?")[0] && this.getRoute(1) == "/uni_modules/uni-id-pages/pages/login/login-withoutpwd") {
-          let loginType = path.split("?")[1].split("=")[1];
-          uni.$emit("uni-id-pages-setLoginType", loginType);
-        } else if (this.getRoute(2) == path) {
-          uni.navigateBack();
-        } else if (this.getRoute(1) != path) {
-          if (index === 0) {
-            uni.navigateTo({
-              url: path,
-              animationType: "slide-in-left",
-              complete(e) {
-              }
-            });
-          } else {
-            uni.redirectTo({
-              url: path,
-              animationType: "slide-in-left",
-              complete(e) {
-              }
-            });
-          }
-        } else {
-          formatAppLog("log", "at uni_modules/uni-id-pages/components/uni-id-pages-fab-login/uni-id-pages-fab-login.vue:244", "出乎意料的情况,path：" + path);
-        }
-      },
-      async login_before(type, navigateBack = true, options = {}) {
-        var _a;
-        formatAppLog("log", "at uni_modules/uni-id-pages/components/uni-id-pages-fab-login/uni-id-pages-fab-login.vue:248", type, options);
-        if ([
-          "qq",
-          "xiaomi",
-          "sinaweibo",
-          "taobao",
-          "facebook",
-          "google",
-          "alipay",
-          "douyin"
-        ].includes(type)) {
-          return uni.showToast({
-            title: "该登录方式暂未实现，欢迎提交pr",
-            icon: "none",
-            duration: 3e3
-          });
-        }
-        formatAppLog("log", "at uni_modules/uni-id-pages/components/uni-id-pages-fab-login/uni-id-pages-fab-login.vue:266", "检查当前环境是否支持这种登录方式");
-        let isAppExist = true;
-        await new Promise((callback) => {
-          formatAppLog("log", "at uni_modules/uni-id-pages/components/uni-id-pages-fab-login/uni-id-pages-fab-login.vue:271", "uni.getProvider", uni.getProvider);
-          uni.getProvider({
-            service: "oauth",
-            success: (res) => {
-              const provider = res.providers.find((item) => item.id === type);
-              formatAppLog("log", "at uni_modules/uni-id-pages/components/uni-id-pages-fab-login/uni-id-pages-fab-login.vue:276", "res", res);
-              if (provider) {
-                isAppExist = (provider == null ? void 0 : provider.isAppExist) ?? true;
-                callback();
-              } else {
-                return uni.showToast({
-                  title: "当前设备不支持此登录，请选择其他登录方式",
-                  icon: "none",
-                  duration: 3e3
-                });
-              }
-            },
-            fail: () => {
-              throw new Error("获取服务供应商失败：" + JSON.stringify(err));
-            }
-          });
-        });
-        if (!isAppExist) {
-          return uni.showToast({
-            title: "当前设备不支持此登录，请选择其他登录方式",
-            icon: "none",
-            duration: 3e3
-          });
-        }
-        let needAgreements = (((_a = config == null ? void 0 : config.agreements) == null ? void 0 : _a.scope) || []).includes("register");
-        if (type != "univerify" && needAgreements && !this.agree) {
-          let agreementsRef = this.getParentComponent().$refs.agreements;
-          return agreementsRef.popup(() => {
-            this.login_before(type, navigateBack, options);
-          });
-        }
-        formatAppLog("log", "at uni_modules/uni-id-pages/components/uni-id-pages-fab-login/uni-id-pages-fab-login.vue:360", "login ----");
-        uni.showLoading({
-          mask: true
-        });
-        if (type == "univerify") {
-          let closeUniverify = function() {
-            uni.hideLoading();
-            univerifyManager.close();
-            univerifyManager.offButtonsClick(onButtonsClickFn);
-          };
-          let univerifyManager = uni.getUniverifyManager();
-          let clickAnotherButtons = false;
-          let onButtonsClickFn = async (res) => {
-            formatAppLog("log", "at uni_modules/uni-id-pages/components/uni-id-pages-fab-login/uni-id-pages-fab-login.vue:372", "点击了第三方登录，provider：", res, res.provider, this.univerifyStyle.buttons.list);
-            clickAnotherButtons = true;
-            let checkBoxState = await uni.getCheckBoxState();
-            this.agree = checkBoxState.state;
-            let {
-              path
-            } = this.univerifyStyle.buttons.list[res.index];
-            if (path) {
-              if (this.getRoute(1).includes("login-withoutpwd") && path.includes("login-withoutpwd")) {
-                this.getParentComponent().showCurrentWebview();
-              }
-              this.toPage(path, 1);
-              closeUniverify();
-            } else {
-              if (this.agree) {
-                closeUniverify();
-                setTimeout(() => {
-                  this.login_before(res.provider);
-                }, 500);
-              } else {
-                uni.showToast({
-                  title: "你未同意隐私政策协议",
-                  icon: "none",
-                  duration: 3e3
-                });
-              }
-            }
-          };
-          univerifyManager.onButtonsClick(onButtonsClickFn);
-          return univerifyManager.login({
-            "univerifyStyle": this.univerifyStyle,
-            success: (res) => {
-              this.login(res.authResult, "univerify");
-            },
-            fail(err2) {
-              formatAppLog("log", "at uni_modules/uni-id-pages/components/uni-id-pages-fab-login/uni-id-pages-fab-login.vue:422", err2);
-              if (!clickAnotherButtons) {
-                uni.navigateBack();
-              }
-            },
-            complete: async (e) => {
-              uni.hideLoading();
-              univerifyManager.offButtonsClick(onButtonsClickFn);
-            }
-          });
-        }
-        if (type === "weixinMobile" || type === "huaweiMobile") {
-          return this.login({
-            phoneCode: options.phoneNumberCode
-          }, type);
-        }
-        uni.login({
-          "provider": type,
-          "onlyAuthorize": true,
-          "univerifyStyle": this.univerifyStyle,
-          success: async (e) => {
-            if (type == "apple") {
-              let res = await this.getUserInfo({
-                provider: "apple"
-              });
-              Object.assign(e.authResult, res.userInfo);
-              uni.hideLoading();
-            }
-            this.login(["huawei", "weixin"].includes(type) ? {
-              code: e.code
-            } : e.authResult, type);
-          },
-          fail: async (err2) => {
-            formatAppLog("error", "at uni_modules/uni-id-pages/components/uni-id-pages-fab-login/uni-id-pages-fab-login.vue:468", JSON.stringify(err2));
-            uni.showModal({
-              content: `登录失败; code: ${err2.errCode || -1}`,
-              confirmText: "知道了",
-              showCancel: false
-            });
-            uni.hideLoading();
-          }
-        });
-      },
-      login(params, type) {
-        formatAppLog("log", "at uni_modules/uni-id-pages/components/uni-id-pages-fab-login/uni-id-pages-fab-login.vue:480", { params, type });
-        let action = "loginBy" + type.trim().replace(type[0], type[0].toUpperCase());
-        const uniIdCo2 = nr.importObject("uni-id-co", {
-          customUI: true
-        });
-        uniIdCo2[action](params).then((result) => {
-          uni.showToast({
-            title: "登录成功",
-            icon: "none",
-            duration: 2e3
-          });
-          mutations.loginSuccess(result);
-        }).catch((e) => {
-          uni.showModal({
-            content: e.message,
-            confirmText: "知道了",
-            showCancel: false
-          });
-        }).finally((e) => {
-          if (type == "univerify") {
-            uni.closeAuthView();
-          }
-          uni.hideLoading();
-        });
-      },
-      async getUserInfo(e) {
-        return new Promise((resolve, reject) => {
-          uni.getUserInfo({
-            ...e,
-            success: (res) => {
-              resolve(res);
-            },
-            fail: (err2) => {
-              uni.showModal({
-                content: JSON.stringify(err2),
-                showCancel: false
-              });
-              reject(err2);
-            }
-          });
-        });
-      }
-    }
-  };
-  function _sfc_render$R(_ctx, _cache, $props, $setup, $data, $options) {
-    return vue.openBlock(), vue.createElementBlock("view", null, [
-      vue.createElementVNode("view", { class: "fab-login-box" }, [
-        (vue.openBlock(true), vue.createElementBlock(
-          vue.Fragment,
-          null,
-          vue.renderList($data.servicesList, (item, index) => {
-            return vue.openBlock(), vue.createElementBlock("view", {
-              class: "item",
-              key: index,
-              onClick: ($event) => item.path ? $options.toPage(item.path) : $options.login_before(item.id, false)
-            }, [
-              vue.createElementVNode("image", {
-                class: "logo",
-                src: item.logo,
-                mode: "scaleToFill"
-              }, null, 8, ["src"]),
-              vue.createElementVNode(
-                "text",
-                { class: "login-title" },
-                vue.toDisplayString(item.text),
-                1
-                /* TEXT */
-              )
-            ], 8, ["onClick"]);
-          }),
-          128
-          /* KEYED_FRAGMENT */
-        ))
-      ])
-    ]);
-  }
-  const __easycom_2$1 = /* @__PURE__ */ _export_sfc(_sfc_main$S, [["render", _sfc_render$R], ["__scopeId", "data-v-c5c7cfa0"], ["__file", "G:/mobile application development/pdd/uni_modules/uni-id-pages/components/uni-id-pages-fab-login/uni-id-pages-fab-login.vue"]]);
-  let currentWebview;
-  const _sfc_main$R = {
-    mixins: [mixin],
-    data() {
-      return {
-        type: "",
-        //快捷登录方式
-        phone: "",
-        //手机号码
-        focusPhone: false,
-        logo: ""
-      };
-    },
-    computed: {
-      async loginTypes() {
-        return config.loginTypes;
-      },
-      isPhone() {
-        return /^1\d{10}$/.test(this.phone);
-      },
-      imgSrc() {
-        const images = {
-          weixin: "/uni_modules/uni-id-pages/static/login/weixin.png",
-          apple: "/uni_modules/uni-id-pages/static/app/apple.png",
-          huawei: "/uni_modules/uni-id-pages/static/login/huawei.png",
-          huaweiMobile: "/uni_modules/uni-id-pages/static/login/huawei-mobile.png"
-        };
-        return images[this.type];
-      }
-    },
-    async onLoad(e) {
-      let type = e.type || config.loginTypes[0];
-      this.type = type;
-      if (type != "univerify") {
-        this.focusPhone = true;
-      }
-      this.$nextTick(() => {
-        if (["weixin", "apple", "huawei", "huaweiMobile"].includes(type)) {
-          this.$refs.uniFabLogin.servicesList = this.$refs.uniFabLogin.servicesList.filter((item) => item.id != type);
-        }
-      });
-      uni.$on("uni-id-pages-setLoginType", (type2) => {
-        this.type = type2;
-      });
-    },
-    onShow() {
-    },
-    onUnload() {
-      uni.$off("uni-id-pages-setLoginType");
-    },
-    onReady() {
-      if (config.loginTypes.includes("univerify") && this.type == "univerify") {
-        uni.preLogin({
-          provider: "univerify",
-          success: () => {
-            const pages2 = getCurrentPages();
-            currentWebview = pages2[pages2.length - 1].$getAppWebview();
-            currentWebview.setStyle({
-              "top": "2000px"
-              // 隐藏当前页面窗体
-            });
-            this.$refs.uniFabLogin.login_before("univerify");
-          },
-          fail: (err2) => {
-            formatAppLog("log", "at uni_modules/uni-id-pages/pages/login/login-withoutpwd.vue:123", err2);
-            if (config.loginTypes.length > 1) {
-              this.$refs.uniFabLogin.login_before(config.loginTypes[1]);
-            } else {
-              uni.showModal({
-                content: err2.message,
-                showCancel: false
-              });
-            }
-          }
-        });
-      }
-    },
-    methods: {
-      showCurrentWebview() {
-        currentWebview.setStyle({
-          "top": 0
-        });
-      },
-      showAgreementModal() {
-        this.$refs.agreements.popup();
-      },
-      quickLogin(e) {
-        var _a, _b;
-        let options = {};
-        formatAppLog("log", "at uni_modules/uni-id-pages/pages/login/login-withoutpwd.vue:149", e);
-        if ((_a = e.detail) == null ? void 0 : _a.code) {
-          options.phoneNumberCode = e.detail.code;
-        }
-        if ((this.type === "weixinMobile" || this.type === "huaweiMobile") && !((_b = e.detail) == null ? void 0 : _b.code))
-          return;
-        this.$refs.uniFabLogin.login_before(this.type, true, options);
-      },
-      toSmsPage() {
-        if (!this.isPhone) {
-          this.focusPhone = true;
-          return uni.showToast({
-            title: "手机号码格式不正确",
-            icon: "none",
-            duration: 3e3
-          });
-        }
-        if (this.needAgreements && !this.agree) {
-          return this.$refs.agreements.popup(this.toSmsPage);
-        }
-        uni.navigateTo({
-          url: "/uni_modules/uni-id-pages/pages/login/login-smscode?phoneNumber=" + this.phone
-        });
-      },
-      //去密码登录页
-      toPwdLogin() {
-        uni.navigateTo({
-          url: "../login/password"
-        });
-      },
-      chooseArea() {
-        uni.showToast({
-          title: "暂不支持其他国家",
-          icon: "none",
-          duration: 3e3
-        });
-      }
-    }
-  };
-  function _sfc_render$Q(_ctx, _cache, $props, $setup, $data, $options) {
-    const _component_uni_id_pages_agreements = resolveEasycom(vue.resolveDynamicComponent("uni-id-pages-agreements"), __easycom_5$2);
-    const _component_uni_easyinput = resolveEasycom(vue.resolveDynamicComponent("uni-easyinput"), __easycom_0$8);
-    const _component_uni_id_pages_fab_login = resolveEasycom(vue.resolveDynamicComponent("uni-id-pages-fab-login"), __easycom_2$1);
-    return vue.openBlock(), vue.createElementBlock("view", { class: "uni-content" }, [
-      vue.createElementVNode("view", { class: "login-logo" }, [
-        vue.createElementVNode("image", { src: $data.logo }, null, 8, ["src"])
-      ]),
-      vue.createCommentVNode(" 顶部文字 "),
-      vue.createElementVNode("text", { class: "title" }, "请选择登录方式"),
-      vue.createCommentVNode(" 快捷登录框 当url带参数时有效 "),
-      ["apple", "weixin", "weixinMobile", "huawei", "huaweiMobile"].includes($data.type) ? (vue.openBlock(), vue.createElementBlock(
-        vue.Fragment,
-        { key: 0 },
-        [
-          vue.createElementVNode("text", { class: "tip" }, "将根据第三方账号服务平台的授权范围获取你的信息"),
-          vue.createElementVNode("view", { class: "quickLogin" }, [
-            $data.type !== "weixinMobile" && $data.type !== "huaweiMobile" ? (vue.openBlock(), vue.createElementBlock("image", {
-              key: 0,
-              onClick: _cache[0] || (_cache[0] = (...args) => $options.quickLogin && $options.quickLogin(...args)),
-              src: $options.imgSrc,
-              mode: "widthFix",
-              class: "quickLoginBtn"
-            }, null, 8, ["src"])) : (vue.openBlock(), vue.createElementBlock("view", {
-              key: 1,
-              style: { "position": "relative" }
-            }, [
-              $data.type === "weixinMobile" ? (vue.openBlock(), vue.createElementBlock(
-                "button",
-                {
-                  key: 0,
-                  type: "primary",
-                  "open-type": "getPhoneNumber",
-                  onGetphonenumber: _cache[1] || (_cache[1] = (...args) => $options.quickLogin && $options.quickLogin(...args)),
-                  class: "uni-btn"
-                },
-                "微信授权手机号登录",
-                32
-                /* NEED_HYDRATION */
-              )) : vue.createCommentVNode("v-if", true),
-              $data.type === "huaweiMobile" ? (vue.openBlock(), vue.createElementBlock(
-                "button",
-                {
-                  key: 1,
-                  "open-type": "getPhoneNumber",
-                  onGetphonenumber: _cache[2] || (_cache[2] = (...args) => $options.quickLogin && $options.quickLogin(...args)),
-                  class: "quickLoginBtn",
-                  style: { "padding": "0", "display": "flex" }
-                },
-                [
-                  vue.createElementVNode("image", {
-                    src: $options.imgSrc,
-                    mode: "widthFix"
-                  }, null, 8, ["src"])
-                ],
-                32
-                /* NEED_HYDRATION */
-              )) : vue.createCommentVNode("v-if", true),
-              this.needAgreements && !this.agree ? (vue.openBlock(), vue.createElementBlock("view", {
-                key: 2,
-                class: "mobile-login-agreement-layer",
-                onClick: _cache[3] || (_cache[3] = (...args) => $options.showAgreementModal && $options.showAgreementModal(...args))
-              })) : vue.createCommentVNode("v-if", true)
-            ])),
-            vue.createVNode(
-              _component_uni_id_pages_agreements,
-              {
-                scope: "register",
-                ref: "agreements"
-              },
-              null,
-              512
-              /* NEED_PATCH */
-            )
-          ])
-        ],
-        64
-        /* STABLE_FRAGMENT */
-      )) : (vue.openBlock(), vue.createElementBlock(
-        vue.Fragment,
-        { key: 1 },
-        [
-          vue.createElementVNode("text", { class: "tip" }, "未注册的账号验证通过后将自动注册"),
-          vue.createElementVNode("view", { class: "phone-box" }, [
-            vue.createElementVNode("view", {
-              onClick: _cache[4] || (_cache[4] = (...args) => $options.chooseArea && $options.chooseArea(...args)),
-              class: "area"
-            }, "+86"),
-            vue.createVNode(_component_uni_easyinput, {
-              trim: "both",
-              focus: $data.focusPhone,
-              onBlur: _cache[5] || (_cache[5] = ($event) => $data.focusPhone = false),
-              class: "input-box",
-              type: "number",
-              inputBorder: false,
-              modelValue: $data.phone,
-              "onUpdate:modelValue": _cache[6] || (_cache[6] = ($event) => $data.phone = $event),
-              maxlength: "11",
-              placeholder: "请输入手机号"
-            }, null, 8, ["focus", "modelValue"])
-          ]),
-          vue.createVNode(
-            _component_uni_id_pages_agreements,
-            {
-              scope: "register",
-              ref: "agreements"
-            },
-            null,
-            512
-            /* NEED_PATCH */
-          ),
-          vue.createElementVNode("button", {
-            class: "uni-btn",
-            type: "primary",
-            onClick: _cache[7] || (_cache[7] = (...args) => $options.toSmsPage && $options.toSmsPage(...args))
-          }, "获取验证码")
-        ],
-        64
-        /* STABLE_FRAGMENT */
-      )),
-      vue.createCommentVNode(" 固定定位的快捷登录按钮 "),
-      vue.createVNode(
-        _component_uni_id_pages_fab_login,
-        { ref: "uniFabLogin" },
-        null,
-        512
-        /* NEED_PATCH */
-      )
-    ]);
-  }
-  const UniModulesUniIdPagesPagesLoginLoginWithoutpwd = /* @__PURE__ */ _export_sfc(_sfc_main$R, [["render", _sfc_render$Q], ["__file", "G:/mobile application development/pdd/uni_modules/uni-id-pages/pages/login/login-withoutpwd.vue"]]);
-  const _sfc_main$Q = {
-    props: {
-      modelValue: String,
-      value: String,
-      scene: {
-        type: String,
-        default() {
-          return "";
-        }
-      },
-      focus: {
-        type: Boolean,
-        default() {
-          return false;
-        }
-      }
-    },
-    computed: {
-      val: {
-        get() {
-          return this.value || this.modelValue;
-        },
-        set(value) {
-          this.$emit("update:modelValue", value);
-        }
-      }
-    },
-    data() {
-      return {
-        focusCaptchaInput: false,
-        captchaBase64: "",
-        loging: false
-      };
-    },
-    watch: {
-      scene: {
-        handler(scene) {
-          if (scene) {
-            this.getImageCaptcha(this.focus);
-          } else {
-            uni.showToast({
-              title: "scene不能为空",
-              icon: "none"
-            });
-          }
-        },
-        immediate: true
-      }
-    },
-    methods: {
-      getImageCaptcha(focus = true) {
-        this.loging = true;
-        if (focus) {
-          this.val = "";
-          this.focusCaptchaInput = true;
-        }
-        const uniIdCo2 = nr.importObject("uni-captcha-co", {
-          customUI: true
-        });
-        uniIdCo2.getImageCaptcha({
-          scene: this.scene
-        }).then((result) => {
-          this.captchaBase64 = result.captchaBase64;
-        }).catch((e) => {
-          uni.showToast({
-            title: e.message,
-            icon: "none"
-          });
-        }).finally((e) => {
-          this.loging = false;
-        });
-      }
-    }
-  };
-  function _sfc_render$P(_ctx, _cache, $props, $setup, $data, $options) {
-    const _component_uni_icons = resolveEasycom(vue.resolveDynamicComponent("uni-icons"), __easycom_0$9);
-    return vue.openBlock(), vue.createElementBlock("view", { class: "captcha-box" }, [
-      vue.createElementVNode("view", { class: "captcha-img-box" }, [
-        $data.loging ? (vue.openBlock(), vue.createBlock(_component_uni_icons, {
-          key: 0,
-          class: "loding",
-          size: "20px",
-          color: "#BBB",
-          type: "spinner-cycle"
-        })) : vue.createCommentVNode("v-if", true),
-        vue.createElementVNode("image", {
-          class: vue.normalizeClass(["captcha-img", { opacity: $data.loging }]),
-          onClick: _cache[0] || (_cache[0] = (...args) => $options.getImageCaptcha && $options.getImageCaptcha(...args)),
-          src: $data.captchaBase64,
-          mode: "widthFix"
-        }, null, 10, ["src"])
-      ]),
-      vue.withDirectives(vue.createElementVNode("input", {
-        onBlur: _cache[1] || (_cache[1] = ($event) => $data.focusCaptchaInput = false),
-        focus: $data.focusCaptchaInput,
-        type: "text",
-        class: "captcha",
-        inputBorder: false,
-        maxlength: "4",
-        "onUpdate:modelValue": _cache[2] || (_cache[2] = ($event) => $options.val = $event),
-        placeholder: "请输入验证码"
-      }, null, 40, ["focus"]), [
-        [vue.vModelText, $options.val]
-      ])
-    ]);
-  }
-  const __easycom_0$5 = /* @__PURE__ */ _export_sfc(_sfc_main$Q, [["render", _sfc_render$P], ["__scopeId", "data-v-a00179ae"], ["__file", "G:/mobile application development/pdd/uni_modules/uni-captcha/components/uni-captcha/uni-captcha.vue"]]);
-  function debounce$1(func, wait) {
-    let timer;
-    wait = wait || 500;
-    return function() {
-      let context = this;
-      let args = arguments;
-      if (timer)
-        clearTimeout(timer);
-      let callNow = !timer;
-      timer = setTimeout(() => {
-        timer = null;
-      }, wait);
-      if (callNow)
-        func.apply(context, args);
-    };
-  }
+  const __easycom_3$3 = /* @__PURE__ */ _export_sfc(_sfc_main$Q, [["render", _sfc_render$P], ["__scopeId", "data-v-9a1e3c32"], ["__file", "G:/mobile application development/pdd/uni_modules/uni-forms/components/uni-forms/uni-forms.vue"]]);
   const _sfc_main$P = {
-    name: "uni-sms-form",
-    model: {
-      prop: "modelValue",
-      event: "update:modelValue"
-    },
-    props: {
-      event: ["update:modelValue"],
-      /**
-       * 倒计时时长 s
-       */
-      count: {
-        type: [String, Number],
-        default: 60
-      },
-      /**
-       * 手机号码
-       */
-      phone: {
-        type: [String, Number],
-        default: ""
-      },
-      /*
-      	验证码类型，用于防止不同功能的验证码混用，目前支持的类型login登录、register注册、bind绑定手机、unbind解绑手机
-      */
-      type: {
-        type: String,
-        default() {
-          return "login";
-        }
-      },
-      /*
-      	验证码输入框是否默认获取焦点
-      */
-      focusCaptchaInput: {
-        type: Boolean,
-        default() {
-          return false;
-        }
-      }
-    },
-    data() {
-      return {
-        captcha: "",
-        reverseNumber: 0,
-        reverseTimer: null,
-        modelValue: "",
-        focusSmsCodeInput: false
-      };
-    },
-    watch: {
-      captcha(value, oldValue) {
-        if (value.length == 4 && oldValue.length != 4) {
-          this.start();
-        }
-      },
-      modelValue(value) {
-        this.$emit("input", value);
-        this.$emit("update:modelValue", value);
-      }
-    },
-    computed: {
-      innerText() {
-        if (this.reverseNumber == 0)
-          return "获取短信验证码";
-        return "重新发送(" + this.reverseNumber + "s)";
-      }
-    },
-    created() {
-      this.initClick();
-    },
-    methods: {
-      getImageCaptcha(focus) {
-        this.$refs.captcha.getImageCaptcha(focus);
-      },
-      initClick() {
-        this.start = debounce$1(() => {
-          if (this.reverseNumber != 0)
-            return;
-          this.sendMsg();
-        });
-      },
-      sendMsg() {
-        if (this.captcha.length != 4) {
-          this.$refs.captcha.focusCaptchaInput = true;
-          return uni.showToast({
-            title: "请先输入图形验证码",
-            icon: "none",
-            duration: 3e3
-          });
-        }
-        let reg_phone = /^1\d{10}$/;
-        if (!reg_phone.test(this.phone))
-          return uni.showToast({
-            title: "手机号格式错误",
-            icon: "none",
-            duration: 3e3
-          });
-        const uniIdCo2 = nr.importObject("uni-id-co", {
-          customUI: true
-        });
-        formatAppLog("log", "at uni_modules/uni-id-pages/components/uni-id-pages-sms-form/uni-id-pages-sms-form.vue:139", "sendSmsCode", {
-          "mobile": this.phone,
-          "scene": this.type,
-          "captcha": this.captcha
-        });
-        uniIdCo2.sendSmsCode({
-          "mobile": this.phone,
-          "scene": this.type,
-          "captcha": this.captcha
-        }).then((result) => {
-          uni.showToast({
-            title: "短信验证码发送成功",
-            icon: "none",
-            duration: 3e3
-          });
-          this.reverseNumber = Number(this.count);
-          this.getCode();
-        }).catch((e) => {
-          if (e.code == "uni-id-invalid-sms-template-id") {
-            this.modelValue = "123456";
-            uni.showToast({
-              title: "已启动测试模式,详情【控制台信息】",
-              icon: "none",
-              duration: 3e3
-            });
-            formatAppLog("warn", "at uni_modules/uni-id-pages/components/uni-id-pages-sms-form/uni-id-pages-sms-form.vue:164", e.message);
-          } else {
-            this.getImageCaptcha();
-            this.captcha = "";
-            uni.showToast({
-              title: e.message,
-              icon: "none",
-              duration: 3e3
-            });
-          }
-        });
-      },
-      getCode() {
-        if (this.reverseNumber == 0) {
-          clearTimeout(this.reverseTimer);
-          this.reverseTimer = null;
-          return;
-        }
-        this.reverseNumber--;
-        this.reverseTimer = setTimeout(() => {
-          this.getCode();
-        }, 1e3);
-      }
-    }
-  };
-  function _sfc_render$O(_ctx, _cache, $props, $setup, $data, $options) {
-    const _component_uni_captcha = resolveEasycom(vue.resolveDynamicComponent("uni-captcha"), __easycom_0$5);
-    const _component_uni_easyinput = resolveEasycom(vue.resolveDynamicComponent("uni-easyinput"), __easycom_0$8);
-    return vue.openBlock(), vue.createElementBlock("view", null, [
-      vue.createVNode(_component_uni_captcha, {
-        focus: $props.focusCaptchaInput,
-        ref: "captcha",
-        scene: "send-sms-code",
-        modelValue: $data.captcha,
-        "onUpdate:modelValue": _cache[0] || (_cache[0] = ($event) => $data.captcha = $event)
-      }, null, 8, ["focus", "modelValue"]),
-      vue.createElementVNode("view", { class: "box" }, [
-        vue.createVNode(_component_uni_easyinput, {
-          focus: $data.focusSmsCodeInput,
-          onBlur: _cache[1] || (_cache[1] = ($event) => $data.focusSmsCodeInput = false),
-          type: "number",
-          class: "input-box",
-          inputBorder: false,
-          modelValue: $data.modelValue,
-          "onUpdate:modelValue": _cache[2] || (_cache[2] = ($event) => $data.modelValue = $event),
-          maxlength: "6",
-          clearable: false,
-          trim: "both",
-          placeholder: "请输入短信验证码"
-        }, null, 8, ["focus", "modelValue"]),
-        vue.createElementVNode("view", {
-          class: "short-code-btn",
-          "hover-class": "hover",
-          onClick: _cache[3] || (_cache[3] = (...args) => _ctx.start && _ctx.start(...args))
-        }, [
-          vue.createElementVNode(
-            "text",
-            {
-              class: vue.normalizeClass(["inner-text", $data.reverseNumber == 0 ? "inner-text-active" : ""])
-            },
-            vue.toDisplayString($options.innerText),
-            3
-            /* TEXT, CLASS */
-          )
-        ])
-      ])
-    ]);
-  }
-  const __easycom_3$3 = /* @__PURE__ */ _export_sfc(_sfc_main$P, [["render", _sfc_render$O], ["__scopeId", "data-v-4b649130"], ["__file", "G:/mobile application development/pdd/uni_modules/uni-id-pages/components/uni-id-pages-sms-form/uni-id-pages-sms-form.vue"]]);
-  const _sfc_main$O = {
     data() {
       return {
         focus: false
@@ -9569,9 +9205,9 @@ ${i3}
       }
     }
   };
-  function _sfc_render$N(_ctx, _cache, $props, $setup, $data, $options) {
+  function _sfc_render$O(_ctx, _cache, $props, $setup, $data, $options) {
     const _component_uni_captcha = resolveEasycom(vue.resolveDynamicComponent("uni-captcha"), __easycom_0$5);
-    const _component_uni_popup = resolveEasycom(vue.resolveDynamicComponent("uni-popup"), __easycom_0$6);
+    const _component_uni_popup = resolveEasycom(vue.resolveDynamicComponent("uni-popup"), __easycom_0$8);
     return vue.openBlock(), vue.createBlock(
       _component_uni_popup,
       {
@@ -9615,8 +9251,8 @@ ${i3}
       /* NEED_PATCH */
     );
   }
-  const __easycom_5$1 = /* @__PURE__ */ _export_sfc(_sfc_main$O, [["render", _sfc_render$N], ["__scopeId", "data-v-d021b99b"], ["__file", "G:/mobile application development/pdd/uni_modules/uni-captcha/components/uni-popup-captcha/uni-popup-captcha.vue"]]);
-  const _sfc_main$N = {
+  const __easycom_5$1 = /* @__PURE__ */ _export_sfc(_sfc_main$P, [["render", _sfc_render$O], ["__scopeId", "data-v-d021b99b"], ["__file", "G:/mobile application development/pdd/uni_modules/uni-captcha/components/uni-popup-captcha/uni-popup-captcha.vue"]]);
+  const _sfc_main$O = {
     mixins: [mixin],
     data() {
       return {
@@ -9671,9 +9307,9 @@ ${i3}
       }
     }
   };
-  function _sfc_render$M(_ctx, _cache, $props, $setup, $data, $options) {
-    const _component_uni_id_pages_sms_form = resolveEasycom(vue.resolveDynamicComponent("uni-id-pages-sms-form"), __easycom_3$3);
-    const _component_uni_forms = resolveEasycom(vue.resolveDynamicComponent("uni-forms"), __easycom_3$5);
+  function _sfc_render$N(_ctx, _cache, $props, $setup, $data, $options) {
+    const _component_uni_id_pages_sms_form = resolveEasycom(vue.resolveDynamicComponent("uni-id-pages-sms-form"), __easycom_3$4);
+    const _component_uni_forms = resolveEasycom(vue.resolveDynamicComponent("uni-forms"), __easycom_3$3);
     const _component_uni_popup_captcha = resolveEasycom(vue.resolveDynamicComponent("uni-popup-captcha"), __easycom_5$1);
     return vue.openBlock(), vue.createElementBlock("view", { class: "uni-content" }, [
       vue.createElementVNode("view", { class: "login-logo" }, [
@@ -9710,8 +9346,8 @@ ${i3}
       }, null, 8, ["onConfirm", "modelValue"])
     ]);
   }
-  const UniModulesUniIdPagesPagesLoginLoginSmscode = /* @__PURE__ */ _export_sfc(_sfc_main$N, [["render", _sfc_render$M], ["__scopeId", "data-v-661d78f6"], ["__file", "G:/mobile application development/pdd/uni_modules/uni-id-pages/pages/login/login-smscode.vue"]]);
-  const _sfc_main$M = {
+  const UniModulesUniIdPagesPagesLoginLoginSmscode = /* @__PURE__ */ _export_sfc(_sfc_main$O, [["render", _sfc_render$N], ["__scopeId", "data-v-661d78f6"], ["__file", "G:/mobile application development/pdd/uni_modules/uni-id-pages/pages/login/login-smscode.vue"]]);
+  const _sfc_main$N = {
     name: "cloud-image",
     emits: ["click"],
     props: {
@@ -9767,7 +9403,7 @@ ${i3}
       };
     }
   };
-  function _sfc_render$L(_ctx, _cache, $props, $setup, $data, $options) {
+  function _sfc_render$M(_ctx, _cache, $props, $setup, $data, $options) {
     return vue.openBlock(), vue.createElementBlock(
       "view",
       {
@@ -9786,8 +9422,8 @@ ${i3}
       /* STYLE */
     );
   }
-  const __easycom_0$4 = /* @__PURE__ */ _export_sfc(_sfc_main$M, [["render", _sfc_render$L], ["__file", "G:/mobile application development/pdd/uni_modules/uni-id-pages/components/cloud-image/cloud-image.vue"]]);
-  const _sfc_main$L = {
+  const __easycom_0$4 = /* @__PURE__ */ _export_sfc(_sfc_main$N, [["render", _sfc_render$M], ["__file", "G:/mobile application development/pdd/uni_modules/uni-id-pages/components/cloud-image/cloud-image.vue"]]);
+  const _sfc_main$M = {
     data() {
       return {
         isPC: false
@@ -9901,9 +9537,9 @@ ${i3}
       }
     }
   };
-  function _sfc_render$K(_ctx, _cache, $props, $setup, $data, $options) {
+  function _sfc_render$L(_ctx, _cache, $props, $setup, $data, $options) {
     const _component_cloud_image = resolveEasycom(vue.resolveDynamicComponent("cloud-image"), __easycom_0$4);
-    const _component_uni_icons = resolveEasycom(vue.resolveDynamicComponent("uni-icons"), __easycom_0$9);
+    const _component_uni_icons = resolveEasycom(vue.resolveDynamicComponent("uni-icons"), __easycom_0$7);
     return vue.openBlock(), vue.createElementBlock(
       "button",
       {
@@ -9932,8 +9568,8 @@ ${i3}
       /* CLASS, STYLE, NEED_HYDRATION */
     );
   }
-  const __easycom_0$3 = /* @__PURE__ */ _export_sfc(_sfc_main$L, [["render", _sfc_render$K], ["__scopeId", "data-v-a428f129"], ["__file", "G:/mobile application development/pdd/uni_modules/uni-id-pages/components/uni-id-pages-avatar/uni-id-pages-avatar.vue"]]);
-  const _sfc_main$K = {
+  const __easycom_0$3 = /* @__PURE__ */ _export_sfc(_sfc_main$M, [["render", _sfc_render$L], ["__scopeId", "data-v-a428f129"], ["__file", "G:/mobile application development/pdd/uni_modules/uni-id-pages/components/uni-id-pages-avatar/uni-id-pages-avatar.vue"]]);
+  const _sfc_main$L = {
     name: "UniBadge",
     emits: ["click"],
     props: {
@@ -10056,7 +9692,7 @@ ${i3}
       }
     }
   };
-  function _sfc_render$J(_ctx, _cache, $props, $setup, $data, $options) {
+  function _sfc_render$K(_ctx, _cache, $props, $setup, $data, $options) {
     return vue.openBlock(), vue.createElementBlock("view", { class: "uni-badge--x" }, [
       vue.renderSlot(_ctx.$slots, "default", {}, void 0, true),
       $props.text ? (vue.openBlock(), vue.createElementBlock(
@@ -10073,8 +9709,8 @@ ${i3}
       )) : vue.createCommentVNode("v-if", true)
     ]);
   }
-  const __easycom_1$2 = /* @__PURE__ */ _export_sfc(_sfc_main$K, [["render", _sfc_render$J], ["__scopeId", "data-v-c97cb896"], ["__file", "G:/mobile application development/pdd/uni_modules/uni-badge/components/uni-badge/uni-badge.vue"]]);
-  const _sfc_main$J = {
+  const __easycom_1$3 = /* @__PURE__ */ _export_sfc(_sfc_main$L, [["render", _sfc_render$K], ["__scopeId", "data-v-c97cb896"], ["__file", "G:/mobile application development/pdd/uni_modules/uni-badge/components/uni-badge/uni-badge.vue"]]);
+  const _sfc_main$K = {
     name: "UniListItem",
     emits: ["click", "switchChange"],
     props: {
@@ -10311,9 +9947,9 @@ ${i3}
       }
     }
   };
-  function _sfc_render$I(_ctx, _cache, $props, $setup, $data, $options) {
-    const _component_uni_icons = resolveEasycom(vue.resolveDynamicComponent("uni-icons"), __easycom_0$9);
-    const _component_uni_badge = resolveEasycom(vue.resolveDynamicComponent("uni-badge"), __easycom_1$2);
+  function _sfc_render$J(_ctx, _cache, $props, $setup, $data, $options) {
+    const _component_uni_icons = resolveEasycom(vue.resolveDynamicComponent("uni-icons"), __easycom_0$7);
+    const _component_uni_badge = resolveEasycom(vue.resolveDynamicComponent("uni-badge"), __easycom_1$3);
     return vue.openBlock(), vue.createElementBlock("view", {
       class: vue.normalizeClass([{ "uni-list-item--disabled": $props.disabled }, "uni-list-item"]),
       style: vue.normalizeStyle({ "background-color": $props.customStyle.backgroundColor }),
@@ -10440,8 +10076,8 @@ ${i3}
       })) : vue.createCommentVNode("v-if", true)
     ], 14, ["hover-class"]);
   }
-  const __easycom_0$2 = /* @__PURE__ */ _export_sfc(_sfc_main$J, [["render", _sfc_render$I], ["__scopeId", "data-v-c7524739"], ["__file", "G:/mobile application development/pdd/uni_modules/uni-list/components/uni-list-item/uni-list-item.vue"]]);
-  const _sfc_main$I = {
+  const __easycom_0$2 = /* @__PURE__ */ _export_sfc(_sfc_main$K, [["render", _sfc_render$J], ["__scopeId", "data-v-c7524739"], ["__file", "G:/mobile application development/pdd/uni_modules/uni-list/components/uni-list-item/uni-list-item.vue"]]);
+  const _sfc_main$J = {
     name: "uniList",
     "mp-weixin": {
       options: {
@@ -10487,7 +10123,7 @@ ${i3}
       }
     }
   };
-  function _sfc_render$H(_ctx, _cache, $props, $setup, $data, $options) {
+  function _sfc_render$I(_ctx, _cache, $props, $setup, $data, $options) {
     return vue.openBlock(), vue.createElementBlock("view", { class: "uni-list uni-border-top-bottom" }, [
       $props.border ? (vue.openBlock(), vue.createElementBlock("view", {
         key: 0,
@@ -10500,11 +10136,11 @@ ${i3}
       })) : vue.createCommentVNode("v-if", true)
     ]);
   }
-  const __easycom_1$1 = /* @__PURE__ */ _export_sfc(_sfc_main$I, [["render", _sfc_render$H], ["__scopeId", "data-v-c2f1266a"], ["__file", "G:/mobile application development/pdd/uni_modules/uni-list/components/uni-list/uni-list.vue"]]);
+  const __easycom_1$2 = /* @__PURE__ */ _export_sfc(_sfc_main$J, [["render", _sfc_render$I], ["__scopeId", "data-v-c2f1266a"], ["__file", "G:/mobile application development/pdd/uni_modules/uni-list/components/uni-list/uni-list.vue"]]);
   const db$2 = nr.database();
   db$2.collection("uni-id-users");
   const uniIdCo$8 = nr.importObject("uni-id-co");
-  const _sfc_main$H = {
+  const _sfc_main$I = {
     emits: ["success"],
     computed: {},
     data() {
@@ -10564,8 +10200,8 @@ ${i3}
       }
     }
   };
-  function _sfc_render$G(_ctx, _cache, $props, $setup, $data, $options) {
-    const _component_uni_popup = resolveEasycom(vue.resolveDynamicComponent("uni-popup"), __easycom_0$6);
+  function _sfc_render$H(_ctx, _cache, $props, $setup, $data, $options) {
+    const _component_uni_popup = resolveEasycom(vue.resolveDynamicComponent("uni-popup"), __easycom_0$8);
     return vue.openBlock(), vue.createBlock(
       _component_uni_popup,
       {
@@ -10604,9 +10240,9 @@ ${i3}
       /* NEED_PATCH */
     );
   }
-  const __easycom_5 = /* @__PURE__ */ _export_sfc(_sfc_main$H, [["render", _sfc_render$G], ["__scopeId", "data-v-e0127e04"], ["__file", "G:/mobile application development/pdd/uni_modules/uni-id-pages/components/uni-id-pages-bind-mobile/uni-id-pages-bind-mobile.vue"]]);
+  const __easycom_5 = /* @__PURE__ */ _export_sfc(_sfc_main$I, [["render", _sfc_render$H], ["__scopeId", "data-v-e0127e04"], ["__file", "G:/mobile application development/pdd/uni_modules/uni-id-pages/components/uni-id-pages-bind-mobile/uni-id-pages-bind-mobile.vue"]]);
   const uniIdCo$7 = nr.importObject("uni-id-co");
-  const _sfc_main$G = {
+  const _sfc_main$H = {
     computed: {
       userInfo() {
         return store.userInfo;
@@ -10765,12 +10401,12 @@ ${i3}
       }
     }
   };
-  function _sfc_render$F(_ctx, _cache, $props, $setup, $data, $options) {
+  function _sfc_render$G(_ctx, _cache, $props, $setup, $data, $options) {
     const _component_uni_id_pages_avatar = resolveEasycom(vue.resolveDynamicComponent("uni-id-pages-avatar"), __easycom_0$3);
     const _component_uni_list_item = resolveEasycom(vue.resolveDynamicComponent("uni-list-item"), __easycom_0$2);
-    const _component_uni_list = resolveEasycom(vue.resolveDynamicComponent("uni-list"), __easycom_1$1);
-    const _component_uni_popup_dialog = resolveEasycom(vue.resolveDynamicComponent("uni-popup-dialog"), __easycom_3$4);
-    const _component_uni_popup = resolveEasycom(vue.resolveDynamicComponent("uni-popup"), __easycom_0$6);
+    const _component_uni_list = resolveEasycom(vue.resolveDynamicComponent("uni-list"), __easycom_1$2);
+    const _component_uni_popup_dialog = resolveEasycom(vue.resolveDynamicComponent("uni-popup-dialog"), __easycom_3$5);
+    const _component_uni_popup = resolveEasycom(vue.resolveDynamicComponent("uni-popup"), __easycom_0$8);
     const _component_uni_id_pages_bind_mobile = resolveEasycom(vue.resolveDynamicComponent("uni-id-pages-bind-mobile"), __easycom_5);
     return vue.openBlock(), vue.createElementBlock("view", { class: "uni-content" }, [
       vue.createElementVNode("view", { class: "avatar" }, [
@@ -10875,9 +10511,9 @@ ${i3}
       )) : vue.createCommentVNode("v-if", true)
     ]);
   }
-  const UniModulesUniIdPagesPagesUserinfoUserinfo = /* @__PURE__ */ _export_sfc(_sfc_main$G, [["render", _sfc_render$F], ["__scopeId", "data-v-0be2f605"], ["__file", "G:/mobile application development/pdd/uni_modules/uni-id-pages/pages/userinfo/userinfo.vue"]]);
+  const UniModulesUniIdPagesPagesUserinfoUserinfo = /* @__PURE__ */ _export_sfc(_sfc_main$H, [["render", _sfc_render$G], ["__scopeId", "data-v-0be2f605"], ["__file", "G:/mobile application development/pdd/uni_modules/uni-id-pages/pages/userinfo/userinfo.vue"]]);
   let mediaQueryObserver;
-  const _sfc_main$F = {
+  const _sfc_main$G = {
     name: "UniMatchMedia",
     props: {
       width: {
@@ -10936,7 +10572,7 @@ ${i3}
       mediaQueryObserver.disconnect();
     }
   };
-  function _sfc_render$E(_ctx, _cache, $props, $setup, $data, $options) {
+  function _sfc_render$F(_ctx, _cache, $props, $setup, $data, $options) {
     return vue.withDirectives((vue.openBlock(), vue.createElementBlock(
       "view",
       null,
@@ -10949,8 +10585,8 @@ ${i3}
       [vue.vShow, $data.matches]
     ]);
   }
-  const __easycom_0$1 = /* @__PURE__ */ _export_sfc(_sfc_main$F, [["render", _sfc_render$E], ["__scopeId", "data-v-ba84726b"], ["__file", "D:/HBuilderX/plugins/uniapp-cli-vite/node_modules/@dcloudio/uni-components/lib/uni-match-media/uni-match-media.vue"]]);
-  const _sfc_main$E = {
+  const __easycom_0$1 = /* @__PURE__ */ _export_sfc(_sfc_main$G, [["render", _sfc_render$F], ["__scopeId", "data-v-ba84726b"], ["__file", "D:/HBuilderX/plugins/uniapp-cli-vite/node_modules/@dcloudio/uni-components/lib/uni-match-media/uni-match-media.vue"]]);
+  const _sfc_main$F = {
     data() {
       return {
         formData: {
@@ -11013,10 +10649,10 @@ ${i3}
       }
     }
   };
-  function _sfc_render$D(_ctx, _cache, $props, $setup, $data, $options) {
+  function _sfc_render$E(_ctx, _cache, $props, $setup, $data, $options) {
     const _component_uni_match_media = resolveEasycom(vue.resolveDynamicComponent("uni-match-media"), __easycom_0$1);
-    const _component_uni_easyinput = resolveEasycom(vue.resolveDynamicComponent("uni-easyinput"), __easycom_0$8);
-    const _component_uni_id_pages_sms_form = resolveEasycom(vue.resolveDynamicComponent("uni-id-pages-sms-form"), __easycom_3$3);
+    const _component_uni_easyinput = resolveEasycom(vue.resolveDynamicComponent("uni-easyinput"), __easycom_0$6);
+    const _component_uni_id_pages_sms_form = resolveEasycom(vue.resolveDynamicComponent("uni-id-pages-sms-form"), __easycom_3$4);
     const _component_uni_popup_captcha = resolveEasycom(vue.resolveDynamicComponent("uni-popup-captcha"), __easycom_5$1);
     return vue.openBlock(), vue.createElementBlock("view", { class: "uni-content" }, [
       vue.createVNode(_component_uni_match_media, { "min-width": 690 }, {
@@ -11064,7 +10700,7 @@ ${i3}
       }, null, 8, ["onConfirm", "modelValue"])
     ]);
   }
-  const UniModulesUniIdPagesPagesUserinfoBindMobileBindMobile = /* @__PURE__ */ _export_sfc(_sfc_main$E, [["render", _sfc_render$D], ["__file", "G:/mobile application development/pdd/uni_modules/uni-id-pages/pages/userinfo/bind-mobile/bind-mobile.vue"]]);
+  const UniModulesUniIdPagesPagesUserinfoBindMobileBindMobile = /* @__PURE__ */ _export_sfc(_sfc_main$F, [["render", _sfc_render$E], ["__file", "G:/mobile application development/pdd/uni_modules/uni-id-pages/pages/userinfo/bind-mobile/bind-mobile.vue"]]);
   function determineDirection(clipX, clipY, clipWidth, clipHeight, currentX, currentY) {
     let corner;
     const mainPoint = [clipX + clipWidth / 2, clipY + clipHeight / 2];
@@ -11252,7 +10888,7 @@ ${i3}
   const _imports_0$4 = "/assets/photo.6f69f4e3.svg";
   const _imports_1$4 = "/assets/rotate.9f2e0410.svg";
   const cache = {};
-  const _sfc_main$D = {
+  const _sfc_main$E = {
     // version: '0.6.3',
     name: "l-clipper",
     props: {
@@ -11977,7 +11613,7 @@ ${i3}
       }
     }
   };
-  function _sfc_render$C(_ctx, _cache, $props, $setup, $data, $options) {
+  function _sfc_render$D(_ctx, _cache, $props, $setup, $data, $options) {
     return vue.openBlock(), vue.createElementBlock(
       "view",
       {
@@ -12088,8 +11724,8 @@ ${i3}
       /* CLASS, STYLE */
     );
   }
-  const limeClipper = /* @__PURE__ */ _export_sfc(_sfc_main$D, [["render", _sfc_render$C], ["__scopeId", "data-v-5dd2a2ff"], ["__file", "G:/mobile application development/pdd/uni_modules/uni-id-pages/pages/userinfo/cropImage/limeClipper/limeClipper.vue"]]);
-  const _sfc_main$C = {
+  const limeClipper = /* @__PURE__ */ _export_sfc(_sfc_main$E, [["render", _sfc_render$D], ["__scopeId", "data-v-5dd2a2ff"], ["__file", "G:/mobile application development/pdd/uni_modules/uni-id-pages/pages/userinfo/cropImage/limeClipper/limeClipper.vue"]]);
+  const _sfc_main$D = {
     components: { limeClipper },
     data() {
       return { path: "", options: { "width": 600, "height": 600 } };
@@ -12110,7 +11746,7 @@ ${i3}
       }
     }
   };
-  function _sfc_render$B(_ctx, _cache, $props, $setup, $data, $options) {
+  function _sfc_render$C(_ctx, _cache, $props, $setup, $data, $options) {
     const _component_limeClipper = vue.resolveComponent("limeClipper");
     return vue.openBlock(), vue.createElementBlock("view", { class: "content" }, [
       vue.createVNode(_component_limeClipper, {
@@ -12125,7 +11761,396 @@ ${i3}
       }, null, 8, ["width", "height", "image-url", "onSuccess", "onCancel"])
     ]);
   }
-  const UniModulesUniIdPagesPagesUserinfoCropImageCropImage = /* @__PURE__ */ _export_sfc(_sfc_main$C, [["render", _sfc_render$B], ["__file", "G:/mobile application development/pdd/uni_modules/uni-id-pages/pages/userinfo/cropImage/cropImage.vue"]]);
+  const UniModulesUniIdPagesPagesUserinfoCropImageCropImage = /* @__PURE__ */ _export_sfc(_sfc_main$D, [["render", _sfc_render$C], ["__file", "G:/mobile application development/pdd/uni_modules/uni-id-pages/pages/userinfo/cropImage/cropImage.vue"]]);
+  const _sfc_main$C = {
+    name: "uniFormsItem",
+    options: {
+      virtualHost: true
+    },
+    provide() {
+      return {
+        uniFormItem: this
+      };
+    },
+    inject: {
+      form: {
+        from: "uniForm",
+        default: null
+      }
+    },
+    props: {
+      // 表单校验规则
+      rules: {
+        type: Array,
+        default() {
+          return null;
+        }
+      },
+      // 表单域的属性名，在使用校验规则时必填
+      name: {
+        type: [String, Array],
+        default: ""
+      },
+      required: {
+        type: Boolean,
+        default: false
+      },
+      label: {
+        type: String,
+        default: ""
+      },
+      // label的宽度
+      labelWidth: {
+        type: [String, Number],
+        default: ""
+      },
+      // label 居中方式，默认 left 取值 left/center/right
+      labelAlign: {
+        type: String,
+        default: ""
+      },
+      // 强制显示错误信息
+      errorMessage: {
+        type: [String, Boolean],
+        default: ""
+      },
+      // 1.4.0 弃用，统一使用 form 的校验时机
+      // validateTrigger: {
+      // 	type: String,
+      // 	default: ''
+      // },
+      // 1.4.0 弃用，统一使用 form 的label 位置
+      // labelPosition: {
+      // 	type: String,
+      // 	default: ''
+      // },
+      // 1.4.0 以下属性已经废弃，请使用  #label 插槽代替
+      leftIcon: String,
+      iconColor: {
+        type: String,
+        default: "#606266"
+      }
+    },
+    data() {
+      return {
+        errMsg: "",
+        userRules: null,
+        localLabelAlign: "left",
+        localLabelWidth: "70px",
+        localLabelPos: "left",
+        border: false,
+        isFirstBorder: false
+      };
+    },
+    computed: {
+      // 处理错误信息
+      msg() {
+        return this.errorMessage || this.errMsg;
+      }
+    },
+    watch: {
+      // 规则发生变化通知子组件更新
+      "form.formRules"(val) {
+        this.init();
+      },
+      "form.labelWidth"(val) {
+        this.localLabelWidth = this._labelWidthUnit(val);
+      },
+      "form.labelPosition"(val) {
+        this.localLabelPos = this._labelPosition();
+      },
+      "form.labelAlign"(val) {
+      }
+    },
+    created() {
+      this.init(true);
+      if (this.name && this.form) {
+        this.$watch(
+          () => {
+            const val = this.form._getDataValue(this.name, this.form.localData);
+            return val;
+          },
+          (value, oldVal) => {
+            const isEqual2 = this.form._isEqual(value, oldVal);
+            if (!isEqual2) {
+              const val = this.itemSetValue(value);
+              this.onFieldChange(val, false);
+            }
+          },
+          {
+            immediate: false
+          }
+        );
+      }
+    },
+    unmounted() {
+      this.__isUnmounted = true;
+      this.unInit();
+    },
+    methods: {
+      /**
+       * 外部调用方法
+       * 设置规则 ，主要用于小程序自定义检验规则
+       * @param {Array} rules 规则源数据
+       */
+      setRules(rules2 = null) {
+        this.userRules = rules2;
+        this.init(false);
+      },
+      // 兼容老版本表单组件
+      setValue() {
+      },
+      /**
+       * 外部调用方法
+       * 校验数据
+       * @param {any} value 需要校验的数据
+       * @param {boolean} 是否立即校验
+       * @return {Array|null} 校验内容
+       */
+      async onFieldChange(value, formtrigger = true) {
+        const {
+          formData,
+          localData,
+          errShowType,
+          validateCheck,
+          validateTrigger,
+          _isRequiredField,
+          _realName
+        } = this.form;
+        const name = _realName(this.name);
+        if (!value) {
+          value = this.form.formData[name];
+        }
+        const ruleLen = this.itemRules.rules && this.itemRules.rules.length;
+        if (!this.validator || !ruleLen || ruleLen === 0)
+          return;
+        const isRequiredField2 = _isRequiredField(this.itemRules.rules || []);
+        let result = null;
+        if (validateTrigger === "bind" || formtrigger) {
+          result = await this.validator.validateUpdate(
+            {
+              [name]: value
+            },
+            formData
+          );
+          if (!isRequiredField2 && (value === void 0 || value === "")) {
+            result = null;
+          }
+          if (result && result.errorMessage) {
+            if (errShowType === "undertext") {
+              this.errMsg = !result ? "" : result.errorMessage;
+            }
+            if (errShowType === "toast") {
+              uni.showToast({
+                title: result.errorMessage || "校验错误",
+                icon: "none"
+              });
+            }
+            if (errShowType === "modal") {
+              uni.showModal({
+                title: "提示",
+                content: result.errorMessage || "校验错误"
+              });
+            }
+          } else {
+            this.errMsg = "";
+          }
+          validateCheck(result ? result : null);
+        } else {
+          this.errMsg = "";
+        }
+        return result ? result : null;
+      },
+      /**
+       * 初始组件数据
+       */
+      init(type = false) {
+        const {
+          validator: validator2,
+          formRules,
+          childrens,
+          formData,
+          localData,
+          _realName,
+          labelWidth,
+          _getDataValue,
+          _setDataValue
+        } = this.form || {};
+        this.localLabelAlign = this._justifyContent();
+        this.localLabelWidth = this._labelWidthUnit(labelWidth);
+        this.localLabelPos = this._labelPosition();
+        this.form && type && childrens.push(this);
+        if (!validator2 || !formRules)
+          return;
+        if (!this.form.isFirstBorder) {
+          this.form.isFirstBorder = true;
+          this.isFirstBorder = true;
+        }
+        if (this.group) {
+          if (!this.group.isFirstBorder) {
+            this.group.isFirstBorder = true;
+            this.isFirstBorder = true;
+          }
+        }
+        this.border = this.form.border;
+        const name = _realName(this.name);
+        const itemRule = this.userRules || this.rules;
+        if (typeof formRules === "object" && itemRule) {
+          formRules[name] = {
+            rules: itemRule
+          };
+          validator2.updateSchema(formRules);
+        }
+        const itemRules = formRules[name] || {};
+        this.itemRules = itemRules;
+        this.validator = validator2;
+        this.itemSetValue(_getDataValue(this.name, localData));
+      },
+      unInit() {
+        if (this.form) {
+          const {
+            childrens,
+            formData,
+            _realName
+          } = this.form;
+          childrens.forEach((item, index) => {
+            if (item === this) {
+              this.form.childrens.splice(index, 1);
+              delete formData[_realName(item.name)];
+            }
+          });
+        }
+      },
+      // 设置item 的值
+      itemSetValue(value) {
+        const name = this.form._realName(this.name);
+        const rules2 = this.itemRules.rules || [];
+        const val = this.form._getValue(name, value, rules2);
+        this.form._setDataValue(name, this.form.formData, val);
+        return val;
+      },
+      /**
+       * 移除该表单项的校验结果
+       */
+      clearValidate() {
+        this.errMsg = "";
+      },
+      // 是否显示星号
+      _isRequired() {
+        return this.required;
+      },
+      // 处理对齐方式
+      _justifyContent() {
+        if (this.form) {
+          const {
+            labelAlign
+          } = this.form;
+          let labelAli = this.labelAlign ? this.labelAlign : labelAlign;
+          if (labelAli === "left")
+            return "flex-start";
+          if (labelAli === "center")
+            return "center";
+          if (labelAli === "right")
+            return "flex-end";
+        }
+        return "flex-start";
+      },
+      // 处理 label宽度单位 ,继承父元素的值
+      _labelWidthUnit(labelWidth) {
+        return this.num2px(this.labelWidth ? this.labelWidth : labelWidth || (this.label ? 70 : "auto"));
+      },
+      // 处理 label 位置
+      _labelPosition() {
+        if (this.form)
+          return this.form.labelPosition || "left";
+        return "left";
+      },
+      /**
+       * 触发时机
+       * @param {Object} rule 当前规则内时机
+       * @param {Object} itemRlue 当前组件时机
+       * @param {Object} parentRule 父组件时机
+       */
+      isTrigger(rule, itemRlue, parentRule) {
+        if (rule === "submit" || !rule) {
+          if (rule === void 0) {
+            if (itemRlue !== "bind") {
+              if (!itemRlue) {
+                return parentRule === "" ? "bind" : "submit";
+              }
+              return "submit";
+            }
+            return "bind";
+          }
+          return "submit";
+        }
+        return "bind";
+      },
+      num2px(num) {
+        if (typeof num === "number") {
+          return `${num}px`;
+        }
+        return num;
+      }
+    }
+  };
+  function _sfc_render$B(_ctx, _cache, $props, $setup, $data, $options) {
+    return vue.openBlock(), vue.createElementBlock(
+      "view",
+      {
+        class: vue.normalizeClass(["uni-forms-item", ["is-direction-" + $data.localLabelPos, $data.border ? "uni-forms-item--border" : "", $data.border && $data.isFirstBorder ? "is-first-border" : ""]])
+      },
+      [
+        vue.renderSlot(_ctx.$slots, "label", {}, () => [
+          vue.createElementVNode(
+            "view",
+            {
+              class: vue.normalizeClass(["uni-forms-item__label", { "no-label": !$props.label && !$props.required }]),
+              style: vue.normalizeStyle({ width: $data.localLabelWidth, justifyContent: $data.localLabelAlign })
+            },
+            [
+              $props.required ? (vue.openBlock(), vue.createElementBlock("text", {
+                key: 0,
+                class: "is-required"
+              }, "*")) : vue.createCommentVNode("v-if", true),
+              vue.createElementVNode(
+                "text",
+                null,
+                vue.toDisplayString($props.label),
+                1
+                /* TEXT */
+              )
+            ],
+            6
+            /* CLASS, STYLE */
+          )
+        ], true),
+        vue.createElementVNode("view", { class: "uni-forms-item__content" }, [
+          vue.renderSlot(_ctx.$slots, "default", {}, void 0, true),
+          vue.createElementVNode(
+            "view",
+            {
+              class: vue.normalizeClass(["uni-forms-item__error", { "msg--active": $options.msg }])
+            },
+            [
+              vue.createElementVNode(
+                "text",
+                null,
+                vue.toDisplayString($options.msg),
+                1
+                /* TEXT */
+              )
+            ],
+            2
+            /* CLASS */
+          )
+        ])
+      ],
+      2
+      /* CLASS */
+    );
+  }
+  const __easycom_1$1 = /* @__PURE__ */ _export_sfc(_sfc_main$C, [["render", _sfc_render$B], ["__scopeId", "data-v-462874dd"], ["__file", "G:/mobile application development/pdd/uni_modules/uni-forms/components/uni-forms-item/uni-forms-item.vue"]]);
   function debounce(func, wait) {
     let timer;
     wait = wait || 500;
@@ -12301,7 +12326,7 @@ ${i3}
   };
   function _sfc_render$A(_ctx, _cache, $props, $setup, $data, $options) {
     const _component_uni_captcha = resolveEasycom(vue.resolveDynamicComponent("uni-captcha"), __easycom_0$5);
-    const _component_uni_easyinput = resolveEasycom(vue.resolveDynamicComponent("uni-easyinput"), __easycom_0$8);
+    const _component_uni_easyinput = resolveEasycom(vue.resolveDynamicComponent("uni-easyinput"), __easycom_0$6);
     return vue.openBlock(), vue.createElementBlock("view", null, [
       vue.createVNode(_component_uni_captcha, {
         focus: $props.focusCaptchaInput,
@@ -12462,11 +12487,11 @@ ${i3}
   };
   function _sfc_render$z(_ctx, _cache, $props, $setup, $data, $options) {
     const _component_uni_match_media = resolveEasycom(vue.resolveDynamicComponent("uni-match-media"), __easycom_0$1);
-    const _component_uni_easyinput = resolveEasycom(vue.resolveDynamicComponent("uni-easyinput"), __easycom_0$8);
-    const _component_uni_forms_item = resolveEasycom(vue.resolveDynamicComponent("uni-forms-item"), __easycom_1$3);
+    const _component_uni_easyinput = resolveEasycom(vue.resolveDynamicComponent("uni-easyinput"), __easycom_0$6);
+    const _component_uni_forms_item = resolveEasycom(vue.resolveDynamicComponent("uni-forms-item"), __easycom_1$1);
     const _component_uni_id_pages_email_form = resolveEasycom(vue.resolveDynamicComponent("uni-id-pages-email-form"), __easycom_3$2);
     const _component_uni_id_pages_agreements = resolveEasycom(vue.resolveDynamicComponent("uni-id-pages-agreements"), __easycom_5$2);
-    const _component_uni_forms = resolveEasycom(vue.resolveDynamicComponent("uni-forms"), __easycom_3$5);
+    const _component_uni_forms = resolveEasycom(vue.resolveDynamicComponent("uni-forms"), __easycom_3$3);
     return vue.openBlock(), vue.createElementBlock("view", { class: "uni-content" }, [
       vue.createVNode(_component_uni_match_media, { "min-width": 690 }, {
         default: vue.withCtx(() => [
@@ -12787,10 +12812,10 @@ ${i3}
   };
   function _sfc_render$y(_ctx, _cache, $props, $setup, $data, $options) {
     const _component_uni_match_media = resolveEasycom(vue.resolveDynamicComponent("uni-match-media"), __easycom_0$1);
-    const _component_uni_easyinput = resolveEasycom(vue.resolveDynamicComponent("uni-easyinput"), __easycom_0$8);
-    const _component_uni_forms_item = resolveEasycom(vue.resolveDynamicComponent("uni-forms-item"), __easycom_1$3);
-    const _component_uni_id_pages_sms_form = resolveEasycom(vue.resolveDynamicComponent("uni-id-pages-sms-form"), __easycom_3$3);
-    const _component_uni_forms = resolveEasycom(vue.resolveDynamicComponent("uni-forms"), __easycom_3$5);
+    const _component_uni_easyinput = resolveEasycom(vue.resolveDynamicComponent("uni-easyinput"), __easycom_0$6);
+    const _component_uni_forms_item = resolveEasycom(vue.resolveDynamicComponent("uni-forms-item"), __easycom_1$1);
+    const _component_uni_id_pages_sms_form = resolveEasycom(vue.resolveDynamicComponent("uni-id-pages-sms-form"), __easycom_3$4);
+    const _component_uni_forms = resolveEasycom(vue.resolveDynamicComponent("uni-forms"), __easycom_3$3);
     const _component_uni_popup_captcha = resolveEasycom(vue.resolveDynamicComponent("uni-popup-captcha"), __easycom_5$1);
     return vue.openBlock(), vue.createElementBlock("view", { class: "uni-content" }, [
       vue.createVNode(_component_uni_match_media, { "min-width": 690 }, {
@@ -13049,10 +13074,10 @@ ${i3}
   };
   function _sfc_render$x(_ctx, _cache, $props, $setup, $data, $options) {
     const _component_uni_match_media = resolveEasycom(vue.resolveDynamicComponent("uni-match-media"), __easycom_0$1);
-    const _component_uni_easyinput = resolveEasycom(vue.resolveDynamicComponent("uni-easyinput"), __easycom_0$8);
-    const _component_uni_forms_item = resolveEasycom(vue.resolveDynamicComponent("uni-forms-item"), __easycom_1$3);
+    const _component_uni_easyinput = resolveEasycom(vue.resolveDynamicComponent("uni-easyinput"), __easycom_0$6);
+    const _component_uni_forms_item = resolveEasycom(vue.resolveDynamicComponent("uni-forms-item"), __easycom_1$1);
     const _component_uni_id_pages_email_form = resolveEasycom(vue.resolveDynamicComponent("uni-id-pages-email-form"), __easycom_3$2);
-    const _component_uni_forms = resolveEasycom(vue.resolveDynamicComponent("uni-forms"), __easycom_3$5);
+    const _component_uni_forms = resolveEasycom(vue.resolveDynamicComponent("uni-forms"), __easycom_3$3);
     const _component_uni_popup_captcha = resolveEasycom(vue.resolveDynamicComponent("uni-popup-captcha"), __easycom_5$1);
     return vue.openBlock(), vue.createElementBlock("view", { class: "uni-content" }, [
       vue.createVNode(_component_uni_match_media, { "min-width": 690 }, {
@@ -13280,9 +13305,9 @@ ${i3}
   };
   function _sfc_render$v(_ctx, _cache, $props, $setup, $data, $options) {
     const _component_uni_match_media = resolveEasycom(vue.resolveDynamicComponent("uni-match-media"), __easycom_0$1);
-    const _component_uni_easyinput = resolveEasycom(vue.resolveDynamicComponent("uni-easyinput"), __easycom_0$8);
-    const _component_uni_forms_item = resolveEasycom(vue.resolveDynamicComponent("uni-forms-item"), __easycom_1$3);
-    const _component_uni_forms = resolveEasycom(vue.resolveDynamicComponent("uni-forms"), __easycom_3$5);
+    const _component_uni_easyinput = resolveEasycom(vue.resolveDynamicComponent("uni-easyinput"), __easycom_0$6);
+    const _component_uni_forms_item = resolveEasycom(vue.resolveDynamicComponent("uni-forms-item"), __easycom_1$1);
+    const _component_uni_forms = resolveEasycom(vue.resolveDynamicComponent("uni-forms"), __easycom_3$3);
     return vue.openBlock(), vue.createElementBlock("view", { class: "uni-content" }, [
       vue.createVNode(_component_uni_match_media, { "min-width": 690 }, {
         default: vue.withCtx(() => [
@@ -13433,10 +13458,10 @@ ${i3}
   };
   function _sfc_render$u(_ctx, _cache, $props, $setup, $data, $options) {
     const _component_uni_match_media = resolveEasycom(vue.resolveDynamicComponent("uni-match-media"), __easycom_0$1);
-    const _component_uni_easyinput = resolveEasycom(vue.resolveDynamicComponent("uni-easyinput"), __easycom_0$8);
-    const _component_uni_forms_item = resolveEasycom(vue.resolveDynamicComponent("uni-forms-item"), __easycom_1$3);
+    const _component_uni_easyinput = resolveEasycom(vue.resolveDynamicComponent("uni-easyinput"), __easycom_0$6);
+    const _component_uni_forms_item = resolveEasycom(vue.resolveDynamicComponent("uni-forms-item"), __easycom_1$1);
     const _component_uni_id_pages_agreements = resolveEasycom(vue.resolveDynamicComponent("uni-id-pages-agreements"), __easycom_5$2);
-    const _component_uni_forms = resolveEasycom(vue.resolveDynamicComponent("uni-forms"), __easycom_3$5);
+    const _component_uni_forms = resolveEasycom(vue.resolveDynamicComponent("uni-forms"), __easycom_3$3);
     return vue.openBlock(), vue.createElementBlock("view", { class: "uni-content" }, [
       vue.createVNode(_component_uni_match_media, { "min-width": 690 }, {
         default: vue.withCtx(() => [
@@ -13667,10 +13692,10 @@ ${i3}
   };
   function _sfc_render$t(_ctx, _cache, $props, $setup, $data, $options) {
     const _component_uni_match_media = resolveEasycom(vue.resolveDynamicComponent("uni-match-media"), __easycom_0$1);
-    const _component_uni_easyinput = resolveEasycom(vue.resolveDynamicComponent("uni-easyinput"), __easycom_0$8);
-    const _component_uni_forms_item = resolveEasycom(vue.resolveDynamicComponent("uni-forms-item"), __easycom_1$3);
-    const _component_uni_id_pages_sms_form = resolveEasycom(vue.resolveDynamicComponent("uni-id-pages-sms-form"), __easycom_3$3);
-    const _component_uni_forms = resolveEasycom(vue.resolveDynamicComponent("uni-forms"), __easycom_3$5);
+    const _component_uni_easyinput = resolveEasycom(vue.resolveDynamicComponent("uni-easyinput"), __easycom_0$6);
+    const _component_uni_forms_item = resolveEasycom(vue.resolveDynamicComponent("uni-forms-item"), __easycom_1$1);
+    const _component_uni_id_pages_sms_form = resolveEasycom(vue.resolveDynamicComponent("uni-id-pages-sms-form"), __easycom_3$4);
+    const _component_uni_forms = resolveEasycom(vue.resolveDynamicComponent("uni-forms"), __easycom_3$3);
     const _component_uni_popup_captcha = resolveEasycom(vue.resolveDynamicComponent("uni-popup-captcha"), __easycom_5$1);
     return vue.openBlock(), vue.createElementBlock("view", { class: "uni-content" }, [
       vue.createVNode(_component_uni_match_media, { "min-width": 690 }, {
@@ -14004,10 +14029,10 @@ ${i3}
   };
   function _sfc_render$r(_ctx, _cache, $props, $setup, $data, $options) {
     const _component_uni_list_item = resolveEasycom(vue.resolveDynamicComponent("uni-list-item"), __easycom_0$2);
-    const _component_uni_list = resolveEasycom(vue.resolveDynamicComponent("uni-list"), __easycom_1$1);
-    const _component_uni_easyinput = resolveEasycom(vue.resolveDynamicComponent("uni-easyinput"), __easycom_0$8);
-    const _component_uni_forms_item = resolveEasycom(vue.resolveDynamicComponent("uni-forms-item"), __easycom_1$3);
-    const _component_uni_forms = resolveEasycom(vue.resolveDynamicComponent("uni-forms"), __easycom_3$5);
+    const _component_uni_list = resolveEasycom(vue.resolveDynamicComponent("uni-list"), __easycom_1$2);
+    const _component_uni_easyinput = resolveEasycom(vue.resolveDynamicComponent("uni-easyinput"), __easycom_0$6);
+    const _component_uni_forms_item = resolveEasycom(vue.resolveDynamicComponent("uni-forms-item"), __easycom_1$1);
+    const _component_uni_forms = resolveEasycom(vue.resolveDynamicComponent("uni-forms"), __easycom_3$3);
     const _component_uni_id_pages_agreements = resolveEasycom(vue.resolveDynamicComponent("uni-id-pages-agreements"), __easycom_5$2);
     return vue.openBlock(), vue.createElementBlock("view", null, [
       $options.isCertify ? (vue.openBlock(), vue.createBlock(_component_uni_list, { key: 0 }, {
@@ -14769,7 +14794,7 @@ ${i3}
       )
     ]);
   }
-  const PagesChatChat = /* @__PURE__ */ _export_sfc(_sfc_main$r, [["render", _sfc_render$q], ["__file", "G:/mobile application development/pdd/pages/chat/chat.vue"]]);
+  const PagesChatChat = /* @__PURE__ */ _export_sfc(_sfc_main$r, [["render", _sfc_render$q], ["__scopeId", "data-v-0a633310"], ["__file", "G:/mobile application development/pdd/pages/chat/chat.vue"]]);
   const _imports_0$1 = "/static/user-icon.png";
   const _imports_2$2 = "/static/address.png";
   const _imports_2$1 = "/static/coupon.png";
@@ -14811,7 +14836,7 @@ ${i3}
       this.getGoods();
     },
     onShow() {
-      this.getOrderCounts();
+      this.fetchOrderCounts();
     },
     methods: {
       async getGoods() {
@@ -14831,51 +14856,37 @@ ${i3}
         const shuffledGoods = [...this.allGoods].sort(() => Math.random() - 0.5);
         return shuffledGoods.slice(0, count);
       },
-      getOrderCounts() {
-        const counts = uni.getStorageSync("orderCounts");
-        if (counts) {
-          this.orderCounts = counts;
-        } else {
-          this.fetchOrderCounts();
-        }
-      },
       async fetchOrderCounts() {
         if (!store.userInfo || !store.userInfo._id)
           return;
         try {
           const db2 = nr.database();
-          const pendingPaymentResult = await db2.collection("order").where({
-            userId: store.userInfo._id,
-            paymentStatus: 0
-          }).count();
-          this.orderCounts[1] = pendingPaymentResult.result.total;
-          const pendingShareResult = await db2.collection("order").where({
-            userId: store.userInfo._id,
-            paymentStatus: 1,
-            shareStatus: 0
-          }).count();
-          this.orderCounts[2] = pendingShareResult.result.total;
-          const pendingShippingResult = await db2.collection("order").where({
-            userId: store.userInfo._id,
-            paymentStatus: 1,
-            shippingStatus: 0
-          }).count();
-          this.orderCounts[3] = pendingShippingResult.result.total;
-          const pendingReceivingResult = await db2.collection("order").where({
-            userId: store.userInfo._id,
-            shippingStatus: 1,
-            deliveryStatus: 0
-          }).count();
-          this.orderCounts[4] = pendingReceivingResult.result.total;
-          const pendingReviewResult = await db2.collection("order").where({
-            userId: store.userInfo._id,
-            deliveryStatus: 1,
-            review: db2.command.exists(false)
-          }).count();
-          this.orderCounts[5] = pendingReviewResult.result.total;
-          uni.setStorageSync("orderCounts", this.orderCounts);
+          const [
+            pendingPaymentResult,
+            pendingShareResult,
+            pendingShippingResult,
+            pendingReceivingResult,
+            pendingReviewResult
+          ] = await Promise.all([
+            db2.collection("order").where({ userId: store.userInfo._id, paymentStatus: 0 }).count(),
+            db2.collection("order").where({ userId: store.userInfo._id, paymentStatus: 1, shareStatus: 0 }).count(),
+            db2.collection("order").where({ userId: store.userInfo._id, paymentStatus: 1, shippingStatus: 0 }).count(),
+            db2.collection("order").where({ userId: store.userInfo._id, shippingStatus: 1, deliveryStatus: 0 }).count(),
+            db2.collection("order").where({
+              userId: store.userInfo._id,
+              deliveryStatus: 1,
+              review: db2.command.exists(false)
+            }).count()
+          ]);
+          this.orderCounts = {
+            1: pendingPaymentResult.result.total,
+            2: pendingShareResult.result.total,
+            3: pendingShippingResult.result.total,
+            4: pendingReceivingResult.result.total,
+            5: pendingReviewResult.result.total
+          };
         } catch (error) {
-          formatAppLog("error", "at pages/user/user.vue:256", "获取订单数量失败:", error);
+          formatAppLog("error", "at pages/user/user.vue:222", "获取订单数量失败:", error);
         }
       },
       navigateToProduct(item) {
@@ -14885,7 +14896,7 @@ ${i3}
           key: "currentProduct",
           data: item,
           success: () => {
-            formatAppLog("log", "at pages/user/user.vue:265", "商品信息存储成功", item);
+            formatAppLog("log", "at pages/user/user.vue:231", "商品信息存储成功", item);
           }
         });
         uni.navigateTo({
@@ -15192,7 +15203,7 @@ ${i3}
           vue.createElementVNode("text", null, "退款售后")
         ])
       ]),
-      vue.createCommentVNode(" 商品列表 "),
+      vue.createCommentVNode(" 修改后的商品列表，与第一个页面完全一致 "),
       vue.createElementVNode("view", { class: "content" }, [
         vue.createElementVNode("view", { class: "tab-content" }, [
           (vue.openBlock(true), vue.createElementBlock(
@@ -15202,16 +15213,15 @@ ${i3}
               var _a;
               return vue.openBlock(), vue.createElementBlock("view", {
                 key: index,
-                class: "content-item"
+                class: "content-item",
+                onClick: ($event) => $options.navigateToProduct(item)
               }, [
-                vue.createElementVNode("view", {
-                  class: "product-card",
-                  onClick: ($event) => $options.navigateToProduct(item)
-                }, [
+                vue.createElementVNode("view", { class: "product-card" }, [
                   vue.createElementVNode("image", {
                     class: "item-image",
                     src: (_a = item.goods_thumb) == null ? void 0 : _a.fileID,
-                    mode: "aspectFill"
+                    mode: "aspectFit",
+                    "lazy-load": true
                   }, null, 8, ["src"]),
                   vue.createElementVNode("view", { class: "product-info" }, [
                     vue.createElementVNode(
@@ -15242,8 +15252,8 @@ ${i3}
                       )
                     ])
                   ])
-                ], 8, ["onClick"])
-              ]);
+                ])
+              ], 8, ["onClick"]);
             }),
             128
             /* KEYED_FRAGMENT */
@@ -15252,7 +15262,7 @@ ${i3}
       ])
     ]);
   }
-  const PagesUserUser = /* @__PURE__ */ _export_sfc(_sfc_main$q, [["render", _sfc_render$p], ["__file", "G:/mobile application development/pdd/pages/user/user.vue"]]);
+  const PagesUserUser = /* @__PURE__ */ _export_sfc(_sfc_main$q, [["render", _sfc_render$p], ["__scopeId", "data-v-0f7520f0"], ["__file", "G:/mobile application development/pdd/pages/user/user.vue"]]);
   const _imports_0 = "/static/left.png";
   const _sfc_main$p = {
     data() {
@@ -15379,7 +15389,7 @@ ${i3}
             ]),
             vue.createElementVNode("image", {
               class: "search-icon",
-              src: _imports_2$4,
+              src: _imports_2$5,
               mode: "aspectFit"
             })
           ]),
@@ -15502,7 +15512,7 @@ ${i3}
       ])
     ]);
   }
-  const PagesSearchSearch = /* @__PURE__ */ _export_sfc(_sfc_main$p, [["render", _sfc_render$o], ["__file", "G:/mobile application development/pdd/pages/search/search.vue"]]);
+  const PagesSearchSearch = /* @__PURE__ */ _export_sfc(_sfc_main$p, [["render", _sfc_render$o], ["__scopeId", "data-v-c10c040c"], ["__file", "G:/mobile application development/pdd/pages/search/search.vue"]]);
   const _sfc_main$o = {
     data() {
       return {
@@ -15603,7 +15613,7 @@ ${i3}
             ]),
             vue.createElementVNode("image", {
               class: "search-icon",
-              src: _imports_2$4,
+              src: _imports_2$5,
               mode: "aspectFit"
             })
           ]),
@@ -15747,11 +15757,12 @@ ${i3}
       ], 40, ["refresher-triggered"])
     ]);
   }
-  const PagesSearchMallList = /* @__PURE__ */ _export_sfc(_sfc_main$o, [["render", _sfc_render$n], ["__file", "G:/mobile application development/pdd/pages/search/mall-list.vue"]]);
+  const PagesSearchMallList = /* @__PURE__ */ _export_sfc(_sfc_main$o, [["render", _sfc_render$n], ["__scopeId", "data-v-5301cf09"], ["__file", "G:/mobile application development/pdd/pages/search/mall-list.vue"]]);
   const _imports_1$2 = "/static/user-icon.png";
   const _sfc_main$n = {
     data() {
       return {
+        currentSwiperIndex: 0,
         goodsInfo: {
           reviews: []
           // 初始化为空数组，避免未定义
@@ -15778,7 +15789,7 @@ ${i3}
       this.initCountdown();
       await this.loadGoodsInfo(options);
       await this.checkFavoriteStatus();
-      formatAppLog("log", "at pages/search/mall-details.vue:234", "Initial userInfo:", store.userInfo);
+      formatAppLog("log", "at pages/search/mall-details.vue:241", "Initial userInfo:", store.userInfo);
       await this.addToHistory();
     },
     onShow() {
@@ -15813,20 +15824,23 @@ ${i3}
             const result = await db2.collection("mall-goods").doc(productId).get();
             if (result) {
               this.goodsInfo = Array.isArray(result.result.data) ? result.result.data[0] : result.result.data;
-              formatAppLog("log", "at pages/search/mall-details.vue:278", "商品数据", this.goodsInfo);
+              formatAppLog("log", "at pages/search/mall-details.vue:285", "商品数据", this.goodsInfo);
               if (!this.goodsInfo.reviews) {
                 this.goodsInfo.reviews = [];
               }
               uni.setStorageSync("currentProduct", this.goodsInfo);
             }
           } else {
-            formatAppLog("error", "at pages/search/mall-details.vue:290", "无法获取商品ID");
+            formatAppLog("error", "at pages/search/mall-details.vue:297", "无法获取商品ID");
           }
         } catch (e) {
-          formatAppLog("error", "at pages/search/mall-details.vue:293", "获取商品信息失败:", e);
+          formatAppLog("error", "at pages/search/mall-details.vue:300", "获取商品信息失败:", e);
         } finally {
           this.isLoading = false;
         }
+      },
+      onSwiperChange(e) {
+        this.currentSwiperIndex = e.detail.current;
       },
       // 初始化倒计时
       initCountdown() {
@@ -15898,7 +15912,7 @@ ${i3}
       },
       async addToHistory() {
         if (!this.goodsInfo || !store.userInfo) {
-          formatAppLog("warn", "at pages/search/mall-details.vue:378", "商品信息或用户信息为空，无法记录到历史浏览");
+          formatAppLog("warn", "at pages/search/mall-details.vue:388", "商品信息或用户信息为空，无法记录到历史浏览");
           return;
         }
         const db2 = nr.database();
@@ -15913,12 +15927,12 @@ ${i3}
               userId: store.userInfo._id,
               productId: this.goodsInfo._id
             });
-            formatAppLog("log", "at pages/search/mall-details.vue:397", "商品已记录到历史浏览");
+            formatAppLog("log", "at pages/search/mall-details.vue:407", "商品已记录到历史浏览");
           } else {
-            formatAppLog("log", "at pages/search/mall-details.vue:399", "商品已存在于历史浏览中");
+            formatAppLog("log", "at pages/search/mall-details.vue:409", "商品已存在于历史浏览中");
           }
         } catch (error) {
-          formatAppLog("error", "at pages/search/mall-details.vue:402", "记录商品到历史浏览失败", error);
+          formatAppLog("error", "at pages/search/mall-details.vue:412", "记录商品到历史浏览失败", error);
         }
       },
       async toggleFavorite() {
@@ -16021,7 +16035,7 @@ ${i3}
           quantity: this.quantity,
           userId: this.userInfo._id
         };
-        formatAppLog("log", "at pages/search/mall-details.vue:512", "支付数据", paymentData);
+        formatAppLog("log", "at pages/search/mall-details.vue:522", "支付数据", paymentData);
         uni.setStorageSync("paymentData", paymentData);
         const db2 = nr.database();
         const orderCollection = db2.collection("order");
@@ -16045,14 +16059,14 @@ ${i3}
               url: "/pages/wallet/pay"
             });
           } else {
-            formatAppLog("error", "at pages/search/mall-details.vue:540", "订单创建成功，但未返回有效的 orderResult");
+            formatAppLog("error", "at pages/search/mall-details.vue:550", "订单创建成功，但未返回有效的 orderResult");
             uni.showToast({
               title: "创建订单失败，请重试",
               icon: "none"
             });
           }
         } catch (error) {
-          formatAppLog("error", "at pages/search/mall-details.vue:547", "创建订单失败:", error);
+          formatAppLog("error", "at pages/search/mall-details.vue:557", "创建订单失败:", error);
           uni.showToast({
             title: "创建订单失败，请重试",
             icon: "none"
@@ -16078,7 +16092,7 @@ ${i3}
         this.isLoadingMap = true;
         try {
           const ipRes = await this.getIPLocation();
-          formatAppLog("log", "at pages/search/mall-details.vue:573", "定位信息:", ipRes);
+          formatAppLog("log", "at pages/search/mall-details.vue:583", "定位信息:", ipRes);
           this.locationInfo = ipRes.data;
           let originalLng = 0, originalLat = 0;
           if (ipRes.data.rectangle) {
@@ -16093,7 +16107,7 @@ ${i3}
             }
           }
         } catch (error) {
-          formatAppLog("error", "at pages/search/mall-details.vue:590", "定位失败:", error);
+          formatAppLog("error", "at pages/search/mall-details.vue:600", "定位失败:", error);
         } finally {
           this.isLoadingMap = false;
         }
@@ -16118,7 +16132,7 @@ ${i3}
     }
   };
   function _sfc_render$m(_ctx, _cache, $props, $setup, $data, $options) {
-    const _component_uni_icons = resolveEasycom(vue.resolveDynamicComponent("uni-icons"), __easycom_0$9);
+    const _component_uni_icons = resolveEasycom(vue.resolveDynamicComponent("uni-icons"), __easycom_0$7);
     return vue.openBlock(), vue.createElementBlock("view", { class: "container" }, [
       vue.createCommentVNode(" Loading State "),
       $data.isLoading ? (vue.openBlock(), vue.createElementBlock("view", {
@@ -16140,30 +16154,47 @@ ${i3}
                 onClick: _cache[0] || (_cache[0] = (...args) => $options.navBack && $options.navBack(...args))
               })
             ]),
-            vue.createCommentVNode(" 轮播图部分 "),
-            vue.createElementVNode("swiper", {
-              class: "banner",
-              circular: "",
-              "indicator-dots": true,
-              autoplay: true,
-              interval: "3000",
-              duration: "1000"
-            }, [
-              (vue.openBlock(true), vue.createElementBlock(
-                vue.Fragment,
-                null,
-                vue.renderList($options.convertToBannerArray($data.goodsInfo.goods_banner_imgs), (item, index) => {
-                  return vue.openBlock(), vue.createElementBlock("swiper-item", { key: index }, [
-                    vue.createElementVNode("image", {
-                      src: item.url,
-                      mode: "aspectFill",
-                      class: "banner-image"
-                    }, null, 8, ["src"])
-                  ]);
-                }),
-                128
-                /* KEYED_FRAGMENT */
-              ))
+            vue.createCommentVNode(" 修改后的轮播图部分 "),
+            vue.createElementVNode("view", { class: "banner-container" }, [
+              vue.createElementVNode(
+                "swiper",
+                {
+                  class: "banner",
+                  circular: "",
+                  "indicator-dots": false,
+                  autoplay: true,
+                  interval: "3000",
+                  duration: "1000",
+                  onChange: _cache[1] || (_cache[1] = (...args) => $options.onSwiperChange && $options.onSwiperChange(...args))
+                },
+                [
+                  (vue.openBlock(true), vue.createElementBlock(
+                    vue.Fragment,
+                    null,
+                    vue.renderList($options.convertToBannerArray($data.goodsInfo.goods_banner_imgs), (item, index) => {
+                      return vue.openBlock(), vue.createElementBlock("swiper-item", { key: index }, [
+                        vue.createElementVNode("image", {
+                          src: item.url,
+                          mode: "aspectFill",
+                          class: "banner-image"
+                        }, null, 8, ["src"])
+                      ]);
+                    }),
+                    128
+                    /* KEYED_FRAGMENT */
+                  ))
+                ],
+                32
+                /* NEED_HYDRATION */
+              ),
+              vue.createCommentVNode(" 将指示器移到swiper外部 "),
+              vue.createElementVNode(
+                "view",
+                { class: "custom-indicator" },
+                vue.toDisplayString($data.currentSwiperIndex + 1) + "/" + vue.toDisplayString($options.convertToBannerArray($data.goodsInfo.goods_banner_imgs).length),
+                1
+                /* TEXT */
+              )
             ]),
             vue.createCommentVNode(" 价格营销信息 "),
             vue.createElementVNode("view", { class: "price-marketing" }, [
@@ -16260,7 +16291,7 @@ ${i3}
                   $data.goodsInfo && $data.goodsInfo.reviews && $data.goodsInfo.reviews.length > 0 ? (vue.openBlock(), vue.createElementBlock("text", {
                     key: 0,
                     class: "reviews-view-all",
-                    onClick: _cache[1] || (_cache[1] = (...args) => $options.goAllReviews && $options.goAllReviews(...args))
+                    onClick: _cache[2] || (_cache[2] = (...args) => $options.goAllReviews && $options.goAllReviews(...args))
                   }, "查看全部>")) : (vue.openBlock(), vue.createElementBlock("text", {
                     key: 1,
                     class: "reviews-view-all",
@@ -16333,7 +16364,7 @@ ${i3}
                 ]),
                 vue.createElementVNode("view", {
                   class: "action-item",
-                  onClick: _cache[2] || (_cache[2] = (...args) => $options.toggleFavorite && $options.toggleFavorite(...args))
+                  onClick: _cache[3] || (_cache[3] = (...args) => $options.toggleFavorite && $options.toggleFavorite(...args))
                 }, [
                   vue.createElementVNode(
                     "text",
@@ -16352,7 +16383,7 @@ ${i3}
               vue.createElementVNode("view", { class: "buy-button" }, [
                 vue.createElementVNode("button", {
                   class: "group-buy",
-                  onClick: _cache[3] || (_cache[3] = (...args) => $options.showPopup && $options.showPopup(...args))
+                  onClick: _cache[4] || (_cache[4] = (...args) => $options.showPopup && $options.showPopup(...args))
                 }, "发起拼单")
               ])
             ]),
@@ -16360,7 +16391,7 @@ ${i3}
             $data.showBuyPopup ? (vue.openBlock(), vue.createElementBlock("view", {
               key: 0,
               class: "popup-mask",
-              onClick: _cache[4] || (_cache[4] = (...args) => $options.hidePopup && $options.hidePopup(...args))
+              onClick: _cache[5] || (_cache[5] = (...args) => $options.hidePopup && $options.hidePopup(...args))
             })) : vue.createCommentVNode("v-if", true),
             vue.createElementVNode(
               "view",
@@ -16371,7 +16402,7 @@ ${i3}
                 vue.createCommentVNode(" 关闭按钮 "),
                 vue.createElementVNode("view", {
                   class: "close-btn",
-                  onClick: _cache[5] || (_cache[5] = (...args) => $options.hidePopup && $options.hidePopup(...args))
+                  onClick: _cache[6] || (_cache[6] = (...args) => $options.hidePopup && $options.hidePopup(...args))
                 }, "×"),
                 vue.createCommentVNode(" 配送信息 "),
                 vue.createElementVNode("view", { class: "delivery-info" }, [
@@ -16386,7 +16417,7 @@ ${i3}
                   $options.userInfo ? (vue.openBlock(), vue.createElementBlock("view", {
                     key: 0,
                     class: "address-info",
-                    onClick: _cache[6] || (_cache[6] = (...args) => $options.goSet && $options.goSet(...args))
+                    onClick: _cache[7] || (_cache[7] = (...args) => $options.goSet && $options.goSet(...args))
                   }, [
                     vue.createElementVNode("view", { class: "address-detail" }, [
                       vue.createElementVNode("image", {
@@ -16490,7 +16521,7 @@ ${i3}
                   vue.createElementVNode("view", { class: "quantity-controls" }, [
                     vue.createElementVNode("button", {
                       class: "qty-btn",
-                      onClick: _cache[7] || (_cache[7] = (...args) => $options.decreaseQuantity && $options.decreaseQuantity(...args))
+                      onClick: _cache[8] || (_cache[8] = (...args) => $options.decreaseQuantity && $options.decreaseQuantity(...args))
                     }, "-"),
                     vue.createElementVNode(
                       "text",
@@ -16501,7 +16532,7 @@ ${i3}
                     ),
                     vue.createElementVNode("button", {
                       class: "qty-btn",
-                      onClick: _cache[8] || (_cache[8] = (...args) => $options.increaseQuantity && $options.increaseQuantity(...args))
+                      onClick: _cache[9] || (_cache[9] = (...args) => $options.increaseQuantity && $options.increaseQuantity(...args))
                     }, "+")
                   ])
                 ]),
@@ -16519,7 +16550,7 @@ ${i3}
                     "button",
                     {
                       class: "payment-btn",
-                      onClick: _cache[9] || (_cache[9] = (...args) => $options.handlePayment && $options.handlePayment(...args))
+                      onClick: _cache[10] || (_cache[10] = (...args) => $options.handlePayment && $options.handlePayment(...args))
                     },
                     " 立即支付 ¥" + vue.toDisplayString(($data.goodsInfo.group_price || $data.goodsInfo.price) * $data.quantity),
                     1
@@ -16548,7 +16579,7 @@ ${i3}
       ))
     ]);
   }
-  const PagesSearchMallDetails = /* @__PURE__ */ _export_sfc(_sfc_main$n, [["render", _sfc_render$m], ["__file", "G:/mobile application development/pdd/pages/search/mall-details.vue"]]);
+  const PagesSearchMallDetails = /* @__PURE__ */ _export_sfc(_sfc_main$n, [["render", _sfc_render$m], ["__scopeId", "data-v-9b3eedc9"], ["__file", "G:/mobile application development/pdd/pages/search/mall-details.vue"]]);
   const _sfc_main$m = {
     data() {
       return {
@@ -16770,7 +16801,7 @@ ${i3}
     }
   };
   function _sfc_render$l(_ctx, _cache, $props, $setup, $data, $options) {
-    const _component_uni_popup = resolveEasycom(vue.resolveDynamicComponent("uni-popup"), __easycom_0$6);
+    const _component_uni_popup = resolveEasycom(vue.resolveDynamicComponent("uni-popup"), __easycom_0$8);
     return vue.openBlock(), vue.createElementBlock("view", { class: "wallet-container" }, [
       vue.createCommentVNode(" 顶部导航栏 "),
       vue.createElementVNode("view", { class: "nav-bar" }, [
@@ -16957,7 +16988,7 @@ ${i3}
       )
     ]);
   }
-  const PagesWalletWallet = /* @__PURE__ */ _export_sfc(_sfc_main$m, [["render", _sfc_render$l], ["__file", "G:/mobile application development/pdd/pages/wallet/wallet.vue"]]);
+  const PagesWalletWallet = /* @__PURE__ */ _export_sfc(_sfc_main$m, [["render", _sfc_render$l], ["__scopeId", "data-v-4c380209"], ["__file", "G:/mobile application development/pdd/pages/wallet/wallet.vue"]]);
   const _sfc_main$l = {
     data() {
       return {
@@ -17210,7 +17241,7 @@ ${i3}
       ])
     ]);
   }
-  const PagesWalletPay = /* @__PURE__ */ _export_sfc(_sfc_main$l, [["render", _sfc_render$k], ["__file", "G:/mobile application development/pdd/pages/wallet/pay.vue"]]);
+  const PagesWalletPay = /* @__PURE__ */ _export_sfc(_sfc_main$l, [["render", _sfc_render$k], ["__scopeId", "data-v-6e3ba243"], ["__file", "G:/mobile application development/pdd/pages/wallet/pay.vue"]]);
   const en$1 = {
     "uni-load-more.contentdown": "Pull up to show more",
     "uni-load-more.contentrefresh": "loading...",
@@ -17449,7 +17480,7 @@ ${i3}
           this.favorItems = this.page === 1 ? newItems : [...this.favorItems, ...newItems];
           this.page++;
         } catch (error) {
-          formatAppLog("error", "at pages/malls-manage/favor.vue:142", "加载收藏商品失败:", error);
+          formatAppLog("error", "at pages/malls-manage/favor.vue:146", "加载收藏商品失败:", error);
           uni.showToast({
             title: "加载收藏商品失败",
             icon: "none"
@@ -17480,6 +17511,35 @@ ${i3}
         }
         this.isAllSelected = !this.isAllSelected;
       },
+      async removeSelectedItems() {
+        if (this.selectedItems.length === 0) {
+          uni.showToast({
+            title: "请选择要移除的商品",
+            icon: "none"
+          });
+          return;
+        }
+        try {
+          const db2 = nr.database();
+          await db2.collection("favor").where({
+            userId: this.userInfo._id,
+            productId: nr.database().command.in(this.selectedItems)
+          }).remove();
+          this.favorItems = this.favorItems.filter((item) => !this.selectedItems.includes(item._id));
+          this.selectedItems = [];
+          this.isAllSelected = false;
+          uni.showToast({
+            title: "已移除选中收藏",
+            icon: "success"
+          });
+        } catch (error) {
+          formatAppLog("error", "at pages/malls-manage/favor.vue:206", "移除收藏失败:", error);
+          uni.showToast({
+            title: "移除收藏失败，请重试",
+            icon: "none"
+          });
+        }
+      },
       async handleCheckout() {
         var _a;
         if (this.selectedItems.length === 0) {
@@ -17491,7 +17551,7 @@ ${i3}
         }
         const selectedProducts = this.favorItems.filter((item) => this.selectedItems.includes(item._id));
         const totalAmount = parseFloat(this.totalPrice);
-        formatAppLog("log", "at pages/malls-manage/favor.vue:184", "商品总价", totalAmount);
+        formatAppLog("log", "at pages/malls-manage/favor.vue:224", "商品总价", totalAmount);
         const paymentData = {
           amount: totalAmount,
           username: this.userInfo.username,
@@ -17535,7 +17595,7 @@ ${i3}
             url: "/pages/wallet/pay"
           });
         } catch (error) {
-          formatAppLog("error", "at pages/malls-manage/favor.vue:234", "创建订单失败:", error);
+          formatAppLog("error", "at pages/malls-manage/favor.vue:274", "创建订单失败:", error);
           uni.showToast({
             title: "创建订单失败，请重试",
             icon: "none"
@@ -17566,7 +17626,7 @@ ${i3}
             icon: "success"
           });
         } catch (error) {
-          formatAppLog("error", "at pages/malls-manage/favor.vue:267", "移除收藏失败:", error);
+          formatAppLog("error", "at pages/malls-manage/favor.vue:307", "移除收藏失败:", error);
           uni.showToast({
             title: "移除收藏失败，请重试",
             icon: "none"
@@ -17581,7 +17641,7 @@ ${i3}
     }
   };
   function _sfc_render$i(_ctx, _cache, $props, $setup, $data, $options) {
-    const _component_uni_icons = resolveEasycom(vue.resolveDynamicComponent("uni-icons"), __easycom_0$9);
+    const _component_uni_icons = resolveEasycom(vue.resolveDynamicComponent("uni-icons"), __easycom_0$7);
     const _component_uni_load_more = resolveEasycom(vue.resolveDynamicComponent("uni-load-more"), __easycom_0);
     return vue.openBlock(), vue.createElementBlock("view", { class: "container" }, [
       vue.createCommentVNode(" 顶部导航栏 "),
@@ -17738,7 +17798,7 @@ ${i3}
         32
         /* NEED_HYDRATION */
       ),
-      vue.createCommentVNode(" 底部结算栏 "),
+      vue.createCommentVNode(" 修改底部结算栏部分 "),
       $data.favorItems.length > 0 ? (vue.openBlock(), vue.createElementBlock("view", {
         key: 0,
         class: "bottom-bar"
@@ -17756,15 +17816,21 @@ ${i3}
             )
           ])
         ]),
+        vue.createCommentVNode(" 新增的移除按钮 "),
+        vue.createElementVNode("button", {
+          class: "remove-all-btn",
+          onClick: _cache[4] || (_cache[4] = (...args) => $options.removeSelectedItems && $options.removeSelectedItems(...args)),
+          disabled: $data.selectedItems.length === 0
+        }, " 移除收藏 ", 8, ["disabled"]),
         vue.createElementVNode("button", {
           class: "checkout-btn",
-          onClick: _cache[4] || (_cache[4] = (...args) => $options.handleCheckout && $options.handleCheckout(...args)),
+          onClick: _cache[5] || (_cache[5] = (...args) => $options.handleCheckout && $options.handleCheckout(...args)),
           disabled: $data.selectedItems.length === 0
         }, " 去结算 (" + vue.toDisplayString($data.selectedItems.length) + ") ", 9, ["disabled"])
       ])) : vue.createCommentVNode("v-if", true)
     ]);
   }
-  const PagesMallsManageFavor = /* @__PURE__ */ _export_sfc(_sfc_main$j, [["render", _sfc_render$i], ["__file", "G:/mobile application development/pdd/pages/malls-manage/favor.vue"]]);
+  const PagesMallsManageFavor = /* @__PURE__ */ _export_sfc(_sfc_main$j, [["render", _sfc_render$i], ["__scopeId", "data-v-37407246"], ["__file", "G:/mobile application development/pdd/pages/malls-manage/favor.vue"]]);
   const _sfc_main$i = {
     data() {
       return {
@@ -17817,7 +17883,7 @@ ${i3}
           this.historyItems = this.page === 1 ? newItems : [...this.historyItems, ...newItems];
           this.page++;
         } catch (error) {
-          formatAppLog("error", "at pages/malls-manage/history.vue:142", "加载历史商品失败:", error);
+          formatAppLog("error", "at pages/malls-manage/history.vue:146", "加载历史商品失败:", error);
           uni.showToast({
             title: "加载历史商品失败",
             icon: "none"
@@ -17848,6 +17914,35 @@ ${i3}
         }
         this.isAllSelected = !this.isAllSelected;
       },
+      async removeSelectedItems() {
+        if (this.selectedItems.length === 0) {
+          uni.showToast({
+            title: "请选择要移除的历史记录",
+            icon: "none"
+          });
+          return;
+        }
+        try {
+          const db2 = nr.database();
+          await db2.collection("history").where({
+            userId: this.userInfo._id,
+            productId: nr.database().command.in(this.selectedItems)
+          }).remove();
+          this.historyItems = this.historyItems.filter((item) => !this.selectedItems.includes(item._id));
+          this.selectedItems = [];
+          this.isAllSelected = false;
+          uni.showToast({
+            title: "已移除选中历史记录",
+            icon: "success"
+          });
+        } catch (error) {
+          formatAppLog("error", "at pages/malls-manage/history.vue:206", "移除历史记录失败:", error);
+          uni.showToast({
+            title: "移除历史记录失败，请重试",
+            icon: "none"
+          });
+        }
+      },
       async handleCheckout() {
         var _a;
         if (this.selectedItems.length === 0) {
@@ -17859,7 +17954,7 @@ ${i3}
         }
         const selectedProducts = this.historyItems.filter((item) => this.selectedItems.includes(item._id));
         const totalAmount = parseFloat(this.totalPrice);
-        formatAppLog("log", "at pages/malls-manage/history.vue:184", "商品总价", totalAmount);
+        formatAppLog("log", "at pages/malls-manage/history.vue:224", "商品总价", totalAmount);
         const paymentData = {
           amount: totalAmount,
           username: this.userInfo.username,
@@ -17903,7 +17998,7 @@ ${i3}
             url: "/pages/wallet/pay"
           });
         } catch (error) {
-          formatAppLog("error", "at pages/malls-manage/history.vue:234", "创建订单失败:", error);
+          formatAppLog("error", "at pages/malls-manage/history.vue:274", "创建订单失败:", error);
           uni.showToast({
             title: "创建订单失败，请重试",
             icon: "none"
@@ -17934,7 +18029,7 @@ ${i3}
             icon: "success"
           });
         } catch (error) {
-          formatAppLog("error", "at pages/malls-manage/history.vue:267", "移除历史失败:", error);
+          formatAppLog("error", "at pages/malls-manage/history.vue:307", "移除历史失败:", error);
           uni.showToast({
             title: "移除历史失败，请重试",
             icon: "none"
@@ -17949,7 +18044,7 @@ ${i3}
     }
   };
   function _sfc_render$h(_ctx, _cache, $props, $setup, $data, $options) {
-    const _component_uni_icons = resolveEasycom(vue.resolveDynamicComponent("uni-icons"), __easycom_0$9);
+    const _component_uni_icons = resolveEasycom(vue.resolveDynamicComponent("uni-icons"), __easycom_0$7);
     const _component_uni_load_more = resolveEasycom(vue.resolveDynamicComponent("uni-load-more"), __easycom_0);
     return vue.openBlock(), vue.createElementBlock("view", { class: "container" }, [
       vue.createCommentVNode(" 顶部导航栏 "),
@@ -17985,7 +18080,7 @@ ${i3}
         "scroll-view",
         {
           "scroll-y": "true",
-          class: "favor-list",
+          class: "history-list",
           onScrolltolower: _cache[3] || (_cache[3] = (...args) => $options.loadMoreItems && $options.loadMoreItems(...args))
         },
         [
@@ -18007,7 +18102,7 @@ ${i3}
             { key: 1 },
             vue.renderList($data.historyItems, (item) => {
               return vue.openBlock(), vue.createElementBlock("view", {
-                class: "favor-item",
+                class: "history-item",
                 key: item._id
               }, [
                 vue.createElementVNode("view", {
@@ -18106,7 +18201,7 @@ ${i3}
         32
         /* NEED_HYDRATION */
       ),
-      vue.createCommentVNode(" 底部结算栏 "),
+      vue.createCommentVNode(" 修改底部结算栏部分 "),
       $data.historyItems.length > 0 ? (vue.openBlock(), vue.createElementBlock("view", {
         key: 0,
         class: "bottom-bar"
@@ -18124,15 +18219,21 @@ ${i3}
             )
           ])
         ]),
+        vue.createCommentVNode(" 新增的移除按钮 "),
+        vue.createElementVNode("button", {
+          class: "remove-all-btn",
+          onClick: _cache[4] || (_cache[4] = (...args) => $options.removeSelectedItems && $options.removeSelectedItems(...args)),
+          disabled: $data.selectedItems.length === 0
+        }, " 移除历史 ", 8, ["disabled"]),
         vue.createElementVNode("button", {
           class: "checkout-btn",
-          onClick: _cache[4] || (_cache[4] = (...args) => $options.handleCheckout && $options.handleCheckout(...args)),
+          onClick: _cache[5] || (_cache[5] = (...args) => $options.handleCheckout && $options.handleCheckout(...args)),
           disabled: $data.selectedItems.length === 0
         }, " 去结算 (" + vue.toDisplayString($data.selectedItems.length) + ") ", 9, ["disabled"])
       ])) : vue.createCommentVNode("v-if", true)
     ]);
   }
-  const PagesMallsManageHistory = /* @__PURE__ */ _export_sfc(_sfc_main$i, [["render", _sfc_render$h], ["__file", "G:/mobile application development/pdd/pages/malls-manage/history.vue"]]);
+  const PagesMallsManageHistory = /* @__PURE__ */ _export_sfc(_sfc_main$i, [["render", _sfc_render$h], ["__scopeId", "data-v-b1bb082e"], ["__file", "G:/mobile application development/pdd/pages/malls-manage/history.vue"]]);
   const _imports_1 = "/static/avatar-default.png";
   const _imports_2 = "/static/empty-order.png";
   const _sfc_main$h = {
@@ -18634,7 +18735,7 @@ ${i3}
     }
   };
   function _sfc_render$g(_ctx, _cache, $props, $setup, $data, $options) {
-    const _component_uni_popup = resolveEasycom(vue.resolveDynamicComponent("uni-popup"), __easycom_0$6);
+    const _component_uni_popup = resolveEasycom(vue.resolveDynamicComponent("uni-popup"), __easycom_0$8);
     return vue.openBlock(), vue.createElementBlock("view", { class: "container" }, [
       vue.createCommentVNode(" 固定头部区域 "),
       vue.createElementVNode("view", { class: "fixed-header" }, [
@@ -19452,10 +19553,11 @@ ${i3}
       )
     ]);
   }
-  const PagesUserOrder = /* @__PURE__ */ _export_sfc(_sfc_main$h, [["render", _sfc_render$g], ["__file", "G:/mobile application development/pdd/pages/user/order.vue"]]);
+  const PagesUserOrder = /* @__PURE__ */ _export_sfc(_sfc_main$h, [["render", _sfc_render$g], ["__scopeId", "data-v-506ae539"], ["__file", "G:/mobile application development/pdd/pages/user/order.vue"]]);
   const _sfc_main$g = {
     data() {
       return {
+        avatar_file: "",
         username: "",
         mobile: "",
         address: "",
@@ -19478,16 +19580,18 @@ ${i3}
               action: "getCurrentUserInfo",
               params: {
                 uid: store.userInfo._id,
-                field: ["username", "mobile", "address"]
+                field: ["username", "mobile", "address", "avatar_file"]
                 // 只获取需要的字段
               }
             }
           });
           if (res.result.code === 0) {
             const userInfo = res.result.userInfo;
+            formatAppLog("log", "at pages/user/set.vue:124", "用户信息", userInfo);
             this.username = userInfo.username || "";
             this.mobile = userInfo.mobile || "";
             this.address = userInfo.address || "";
+            this.avatar_file = userInfo.avatar_file || "";
             store.userInfo = {
               ...store.userInfo,
               ...userInfo
@@ -19496,11 +19600,12 @@ ${i3}
             throw new Error(res.result.message || "获取用户信息失败");
           }
         } catch (e) {
-          formatAppLog("error", "at pages/user/set.vue:136", "获取用户信息失败:", e);
+          formatAppLog("error", "at pages/user/set.vue:139", "获取用户信息失败:", e);
           const localInfo = store.userInfo || {};
           this.username = localInfo.username || "";
           this.mobile = localInfo.mobile || "";
           this.address = localInfo.address || "";
+          this.avatar_file = localInfo.avatar_file || "";
           uni.showToast({
             title: "获取信息失败，使用缓存数据",
             icon: "none"
@@ -19526,9 +19631,10 @@ ${i3}
             ...store.userInfo,
             username: this.username,
             mobile: this.mobile,
-            address: this.address
+            address: this.address,
+            avatar_file: this.avatar_file
           };
-          formatAppLog("log", "at pages/user/set.vue:172", "之后用户信息", store.userInfo);
+          formatAppLog("log", "at pages/user/set.vue:177", "之后用户信息", store.userInfo);
           uni.showToast({
             title: "保存成功",
             icon: "success"
@@ -19537,7 +19643,7 @@ ${i3}
             uni.navigateBack();
           }, 1500);
         } catch (error) {
-          formatAppLog("error", "at pages/user/set.vue:182", "保存用户信息失败:", error);
+          formatAppLog("error", "at pages/user/set.vue:187", "保存用户信息失败:", error);
           uni.showToast({
             title: "保存失败，请重试",
             icon: "none"
@@ -19551,11 +19657,22 @@ ${i3}
         uni.showModal({
           title: "提示",
           content: "确定要退出登录吗？",
-          success: (res) => {
+          success: async (res) => {
             if (res.confirm) {
-              uni.navigateTo({
-                url: "/uni_modules/uni-id-pages/pages/login/login-withpwd"
-              });
+              try {
+                uni.removeStorageSync("uni_id_token");
+                uni.removeStorageSync("uni_id_userinfo");
+                store.userInfo = {};
+                uni.redirectTo({
+                  url: "/uni_modules/uni-id-pages/pages/login/login-withpwd"
+                });
+              } catch (error) {
+                formatAppLog("error", "at pages/user/set.vue:216", "退出登录失败:", error);
+                uni.showToast({
+                  title: "退出登录失败，请重试",
+                  icon: "none"
+                });
+              }
             }
           }
         });
@@ -19567,7 +19684,7 @@ ${i3}
         });
         try {
           const ipRes = await this.getIPLocation();
-          formatAppLog("log", "at pages/user/set.vue:212", "定位信息:", ipRes);
+          formatAppLog("log", "at pages/user/set.vue:233", "定位信息:", ipRes);
           this.locationInfo = ipRes.data;
           let originalLng = 0, originalLat = 0;
           if (ipRes.data.rectangle) {
@@ -19582,7 +19699,7 @@ ${i3}
             }
           }
         } catch (error) {
-          formatAppLog("error", "at pages/user/set.vue:229", "定位失败:", error);
+          formatAppLog("error", "at pages/user/set.vue:250", "定位失败:", error);
           this.locationInfo = null;
           uni.showToast({
             title: "定位失败",
@@ -19612,7 +19729,6 @@ ${i3}
     }
   };
   function _sfc_render$f(_ctx, _cache, $props, $setup, $data, $options) {
-    const _component_uni_id_pages_avatar = resolveEasycom(vue.resolveDynamicComponent("uni-id-pages-avatar"), __easycom_0$3);
     return vue.openBlock(), vue.createElementBlock("view", { class: "container" }, [
       vue.createCommentVNode(" 顶部导航栏 "),
       vue.createElementVNode("view", { class: "nav-bar" }, [
@@ -19635,13 +19751,13 @@ ${i3}
         },
         [
           vue.createElementVNode("view", { class: "form-card" }, [
-            vue.createElementVNode("view", { class: "form-item avatar-item" }, [
+            vue.createElementVNode("view", { class: "form-item avatar_file-item" }, [
               vue.createElementVNode("text", { class: "label" }, "头像"),
-              vue.createElementVNode("view", { class: "avatar-wrapper" }, [
-                vue.createVNode(_component_uni_id_pages_avatar, {
-                  width: "120rpx",
-                  height: "120rpx"
-                })
+              vue.createElementVNode("view", { class: "avatar_file-wrapper" }, [
+                vue.createElementVNode("img", {
+                  src: $data.avatar_file.url,
+                  alt: ""
+                }, null, 8, ["src"])
               ])
             ]),
             vue.createElementVNode("view", { class: "divider" }),
@@ -19779,7 +19895,7 @@ ${i3}
       )
     ]);
   }
-  const PagesUserSet = /* @__PURE__ */ _export_sfc(_sfc_main$g, [["render", _sfc_render$f], ["__file", "G:/mobile application development/pdd/pages/user/set.vue"]]);
+  const PagesUserSet = /* @__PURE__ */ _export_sfc(_sfc_main$g, [["render", _sfc_render$f], ["__scopeId", "data-v-2193d213"], ["__file", "G:/mobile application development/pdd/pages/user/set.vue"]]);
   const _sfc_main$f = {
     data() {
       return {
@@ -19788,7 +19904,9 @@ ${i3}
         categories: [],
         currentTabData: [],
         allGoods: [],
-        banners: []
+        banners: [],
+        currentSwiperIndex: 0
+        // 新增当前轮播图索引
       };
     },
     onLoad() {
@@ -19803,32 +19921,47 @@ ${i3}
             this.searchPlaceholder = this.allGoods[Math.floor(Math.random() * this.allGoods.length)].keywords || "请输入商品信息";
           }
         } catch (err2) {
-          formatAppLog("error", "at pages/subsidy/subsidy.vue:84", "获取数据失败:", err2);
+          formatAppLog("error", "at pages/subsidy/subsidy.vue:91", "获取数据失败:", err2);
         }
+      },
+      onSwiperChange(e) {
+        this.currentSwiperIndex = e.detail.current;
       },
       async getCategories() {
         try {
-          const { result: { data: data2 } } = await nr.database().collection("mall-categories").get();
+          const {
+            result: {
+              data: data2
+            }
+          } = await nr.database().collection("mall-categories").get();
           this.categories = data2 || [];
         } catch (err2) {
-          formatAppLog("error", "at pages/subsidy/subsidy.vue:92", "获取分类数据失败:", err2);
+          formatAppLog("error", "at pages/subsidy/subsidy.vue:106", "获取分类数据失败:", err2);
         }
       },
       async getGoods() {
         try {
-          const { result: { data: data2 } } = await nr.database().collection("mall-goods").get();
+          const {
+            result: {
+              data: data2
+            }
+          } = await nr.database().collection("mall-goods").get();
           this.allGoods = data2 || [];
         } catch (err2) {
-          formatAppLog("error", "at pages/subsidy/subsidy.vue:100", "获取商品数据失败:", err2);
+          formatAppLog("error", "at pages/subsidy/subsidy.vue:118", "获取商品数据失败:", err2);
         }
       },
       async getBanners() {
         try {
-          const { result: { data: data2 } } = await nr.database().collection("banner").get();
+          const {
+            result: {
+              data: data2
+            }
+          } = await nr.database().collection("banner").get();
           const bannerData = data2[0] || {};
           this.banners = bannerData.banner_imgs.slice(0, 6).map((item) => item.fileID || item.url);
         } catch (err2) {
-          formatAppLog("error", "at pages/subsidy/subsidy.vue:109", "获取轮播图数据失败:", err2);
+          formatAppLog("error", "at pages/subsidy/subsidy.vue:131", "获取轮播图数据失败:", err2);
         }
       },
       switchTab(index) {
@@ -19862,7 +19995,7 @@ ${i3}
           key: "currentProduct",
           data: item,
           success: () => {
-            formatAppLog("log", "at pages/subsidy/subsidy.vue:142", "商品信息存储成功", item);
+            formatAppLog("log", "at pages/subsidy/subsidy.vue:164", "商品信息存储成功", item);
           }
         });
         uni.navigateTo({
@@ -19898,7 +20031,7 @@ ${i3}
             }, null, 8, ["placeholder"]),
             vue.createElementVNode("image", {
               class: "search-icon",
-              src: _imports_2$4,
+              src: _imports_2$5,
               mode: "aspectFit"
             })
           ])
@@ -19924,33 +20057,48 @@ ${i3}
         "scroll-y": "",
         class: "scroll-container"
       }, [
-        vue.createCommentVNode(" 轮播图 "),
+        vue.createCommentVNode(" 修改后的轮播图部分 "),
         vue.createElementVNode("view", { class: "banner-container" }, [
-          vue.createElementVNode("swiper", {
-            class: "banner-swiper",
-            "indicator-dots": "true",
-            autoplay: "true",
-            interval: "5000",
-            circular: "true"
-          }, [
-            (vue.openBlock(true), vue.createElementBlock(
-              vue.Fragment,
-              null,
-              vue.renderList($data.banners, (banner, index) => {
-                return vue.openBlock(), vue.createElementBlock("swiper-item", { key: index }, [
-                  vue.createElementVNode("image", {
-                    class: "banner-image",
-                    src: banner,
-                    mode: "aspectFill"
-                  }, null, 8, ["src"])
-                ]);
-              }),
-              128
-              /* KEYED_FRAGMENT */
-            ))
-          ])
+          vue.createElementVNode(
+            "swiper",
+            {
+              class: "banner-swiper",
+              "indicator-dots": false,
+              autoplay: "true",
+              interval: "5000",
+              circular: "true",
+              onChange: _cache[2] || (_cache[2] = (...args) => $options.onSwiperChange && $options.onSwiperChange(...args))
+            },
+            [
+              (vue.openBlock(true), vue.createElementBlock(
+                vue.Fragment,
+                null,
+                vue.renderList($data.banners, (banner, index) => {
+                  return vue.openBlock(), vue.createElementBlock("swiper-item", { key: index }, [
+                    vue.createElementVNode("image", {
+                      class: "banner-image",
+                      src: banner,
+                      mode: "aspectFill"
+                    }, null, 8, ["src"])
+                  ]);
+                }),
+                128
+                /* KEYED_FRAGMENT */
+              ))
+            ],
+            32
+            /* NEED_HYDRATION */
+          ),
+          vue.createCommentVNode(" 添加自定义指示器 "),
+          vue.createElementVNode(
+            "view",
+            { class: "custom-indicator" },
+            vue.toDisplayString($data.currentSwiperIndex + 1) + "/" + vue.toDisplayString($data.banners.length),
+            1
+            /* TEXT */
+          )
         ]),
-        vue.createCommentVNode(" 内容区域 "),
+        vue.createCommentVNode(" 修改后的content区域，与第一个页面完全一致 "),
         vue.createElementVNode("view", { class: "content" }, [
           $data.currentTab !== null ? (vue.openBlock(), vue.createElementBlock("view", {
             key: 0,
@@ -19970,7 +20118,8 @@ ${i3}
                     vue.createElementVNode("image", {
                       class: "item-image",
                       src: (_a = item.goods_thumb) == null ? void 0 : _a.fileID,
-                      mode: "aspectFit"
+                      mode: "aspectFit",
+                      "lazy-load": true
                     }, null, 8, ["src"]),
                     vue.createElementVNode("view", { class: "product-info" }, [
                       vue.createElementVNode(
@@ -20015,7 +20164,7 @@ ${i3}
       ])
     ]);
   }
-  const PagesSubsidySubsidy = /* @__PURE__ */ _export_sfc(_sfc_main$f, [["render", _sfc_render$e], ["__file", "G:/mobile application development/pdd/pages/subsidy/subsidy.vue"]]);
+  const PagesSubsidySubsidy = /* @__PURE__ */ _export_sfc(_sfc_main$f, [["render", _sfc_render$e], ["__scopeId", "data-v-ae46ba77"], ["__file", "G:/mobile application development/pdd/pages/subsidy/subsidy.vue"]]);
   const _sfc_main$e = {
     data() {
       return {
@@ -20024,7 +20173,9 @@ ${i3}
         categories: [],
         currentTabData: [],
         allGoods: [],
-        banners: []
+        banners: [],
+        currentSwiperIndex: 0
+        // 新增当前轮播图索引
       };
     },
     onLoad() {
@@ -20039,32 +20190,47 @@ ${i3}
             this.searchPlaceholder = this.allGoods[Math.floor(Math.random() * this.allGoods.length)].keywords || "请输入商品信息";
           }
         } catch (err2) {
-          formatAppLog("error", "at pages/buy-vegetables/buy-vegetables.vue:84", "获取数据失败:", err2);
+          formatAppLog("error", "at pages/buy-vegetables/buy-vegetables.vue:91", "获取数据失败:", err2);
         }
+      },
+      onSwiperChange(e) {
+        this.currentSwiperIndex = e.detail.current;
       },
       async getCategories() {
         try {
-          const { result: { data: data2 } } = await nr.database().collection("mall-categories").get();
+          const {
+            result: {
+              data: data2
+            }
+          } = await nr.database().collection("mall-categories").get();
           this.categories = data2 || [];
         } catch (err2) {
-          formatAppLog("error", "at pages/buy-vegetables/buy-vegetables.vue:92", "获取分类数据失败:", err2);
+          formatAppLog("error", "at pages/buy-vegetables/buy-vegetables.vue:106", "获取分类数据失败:", err2);
         }
       },
       async getGoods() {
         try {
-          const { result: { data: data2 } } = await nr.database().collection("mall-goods").get();
+          const {
+            result: {
+              data: data2
+            }
+          } = await nr.database().collection("mall-goods").get();
           this.allGoods = data2 || [];
         } catch (err2) {
-          formatAppLog("error", "at pages/buy-vegetables/buy-vegetables.vue:100", "获取商品数据失败:", err2);
+          formatAppLog("error", "at pages/buy-vegetables/buy-vegetables.vue:118", "获取商品数据失败:", err2);
         }
       },
       async getBanners() {
         try {
-          const { result: { data: data2 } } = await nr.database().collection("banner").get();
+          const {
+            result: {
+              data: data2
+            }
+          } = await nr.database().collection("banner").get();
           const bannerData = data2[0] || {};
           this.banners = bannerData.banner_imgs.slice(0, 6).map((item) => item.fileID || item.url);
         } catch (err2) {
-          formatAppLog("error", "at pages/buy-vegetables/buy-vegetables.vue:109", "获取轮播图数据失败:", err2);
+          formatAppLog("error", "at pages/buy-vegetables/buy-vegetables.vue:131", "获取轮播图数据失败:", err2);
         }
       },
       switchTab(index) {
@@ -20098,7 +20264,7 @@ ${i3}
           key: "currentProduct",
           data: item,
           success: () => {
-            formatAppLog("log", "at pages/buy-vegetables/buy-vegetables.vue:142", "商品信息存储成功", item);
+            formatAppLog("log", "at pages/buy-vegetables/buy-vegetables.vue:164", "商品信息存储成功", item);
           }
         });
         uni.navigateTo({
@@ -20134,7 +20300,7 @@ ${i3}
             }, null, 8, ["placeholder"]),
             vue.createElementVNode("image", {
               class: "search-icon",
-              src: _imports_2$4,
+              src: _imports_2$5,
               mode: "aspectFit"
             })
           ])
@@ -20160,33 +20326,48 @@ ${i3}
         "scroll-y": "",
         class: "scroll-container"
       }, [
-        vue.createCommentVNode(" 轮播图 "),
+        vue.createCommentVNode(" 修改后的轮播图部分 "),
         vue.createElementVNode("view", { class: "banner-container" }, [
-          vue.createElementVNode("swiper", {
-            class: "banner-swiper",
-            "indicator-dots": "true",
-            autoplay: "true",
-            interval: "5000",
-            circular: "true"
-          }, [
-            (vue.openBlock(true), vue.createElementBlock(
-              vue.Fragment,
-              null,
-              vue.renderList($data.banners, (banner, index) => {
-                return vue.openBlock(), vue.createElementBlock("swiper-item", { key: index }, [
-                  vue.createElementVNode("image", {
-                    class: "banner-image",
-                    src: banner,
-                    mode: "aspectFill"
-                  }, null, 8, ["src"])
-                ]);
-              }),
-              128
-              /* KEYED_FRAGMENT */
-            ))
-          ])
+          vue.createElementVNode(
+            "swiper",
+            {
+              class: "banner-swiper",
+              "indicator-dots": false,
+              autoplay: "true",
+              interval: "5000",
+              circular: "true",
+              onChange: _cache[2] || (_cache[2] = (...args) => $options.onSwiperChange && $options.onSwiperChange(...args))
+            },
+            [
+              (vue.openBlock(true), vue.createElementBlock(
+                vue.Fragment,
+                null,
+                vue.renderList($data.banners, (banner, index) => {
+                  return vue.openBlock(), vue.createElementBlock("swiper-item", { key: index }, [
+                    vue.createElementVNode("image", {
+                      class: "banner-image",
+                      src: banner,
+                      mode: "aspectFill"
+                    }, null, 8, ["src"])
+                  ]);
+                }),
+                128
+                /* KEYED_FRAGMENT */
+              ))
+            ],
+            32
+            /* NEED_HYDRATION */
+          ),
+          vue.createCommentVNode(" 添加自定义指示器 "),
+          vue.createElementVNode(
+            "view",
+            { class: "custom-indicator" },
+            vue.toDisplayString($data.currentSwiperIndex + 1) + "/" + vue.toDisplayString($data.banners.length),
+            1
+            /* TEXT */
+          )
         ]),
-        vue.createCommentVNode(" 内容区域 "),
+        vue.createCommentVNode(" 修改后的content区域，与第一个页面完全一致 "),
         vue.createElementVNode("view", { class: "content" }, [
           $data.currentTab !== null ? (vue.openBlock(), vue.createElementBlock("view", {
             key: 0,
@@ -20206,7 +20387,8 @@ ${i3}
                     vue.createElementVNode("image", {
                       class: "item-image",
                       src: (_a = item.goods_thumb) == null ? void 0 : _a.fileID,
-                      mode: "aspectFit"
+                      mode: "aspectFit",
+                      "lazy-load": true
                     }, null, 8, ["src"]),
                     vue.createElementVNode("view", { class: "product-info" }, [
                       vue.createElementVNode(
@@ -20251,7 +20433,7 @@ ${i3}
       ])
     ]);
   }
-  const PagesBuyVegetablesBuyVegetables = /* @__PURE__ */ _export_sfc(_sfc_main$e, [["render", _sfc_render$d], ["__file", "G:/mobile application development/pdd/pages/buy-vegetables/buy-vegetables.vue"]]);
+  const PagesBuyVegetablesBuyVegetables = /* @__PURE__ */ _export_sfc(_sfc_main$e, [["render", _sfc_render$d], ["__scopeId", "data-v-5ba0e379"], ["__file", "G:/mobile application development/pdd/pages/buy-vegetables/buy-vegetables.vue"]]);
   const _sfc_main$d = {
     data() {
       return {
@@ -20269,7 +20451,7 @@ ${i3}
       vue.createElementVNode("web-view", { src: $data.url }, null, 8, ["src"])
     ]);
   }
-  const PagesWebviewWebview = /* @__PURE__ */ _export_sfc(_sfc_main$d, [["render", _sfc_render$c], ["__file", "G:/mobile application development/pdd/pages/webview/webview.vue"]]);
+  const PagesWebviewWebview = /* @__PURE__ */ _export_sfc(_sfc_main$d, [["render", _sfc_render$c], ["__scopeId", "data-v-deb32cb9"], ["__file", "G:/mobile application development/pdd/pages/webview/webview.vue"]]);
   const ERR_MSG_OK = "chooseAndUploadFile:ok";
   const ERR_MSG_FAIL = "chooseAndUploadFile:fail";
   function chooseImage(opts) {
@@ -22402,11 +22584,11 @@ ${i3}
     }
   };
   function _sfc_render$7(_ctx, _cache, $props, $setup, $data, $options) {
-    const _component_uni_easyinput = resolveEasycom(vue.resolveDynamicComponent("uni-easyinput"), __easycom_0$8);
-    const _component_uni_forms_item = resolveEasycom(vue.resolveDynamicComponent("uni-forms-item"), __easycom_1$3);
+    const _component_uni_easyinput = resolveEasycom(vue.resolveDynamicComponent("uni-easyinput"), __easycom_0$6);
+    const _component_uni_forms_item = resolveEasycom(vue.resolveDynamicComponent("uni-forms-item"), __easycom_1$1);
     const _component_uni_file_picker = resolveEasycom(vue.resolveDynamicComponent("uni-file-picker"), __easycom_1);
     const _component_uni_data_checkbox = resolveEasycom(vue.resolveDynamicComponent("uni-data-checkbox"), __easycom_3$1);
-    const _component_uni_forms = resolveEasycom(vue.resolveDynamicComponent("uni-forms"), __easycom_3$5);
+    const _component_uni_forms = resolveEasycom(vue.resolveDynamicComponent("uni-forms"), __easycom_3$3);
     return vue.openBlock(), vue.createElementBlock("view", { class: "uni-container" }, [
       vue.createVNode(_component_uni_forms, {
         ref: "form",
@@ -22807,10 +22989,10 @@ ${i3}
     }
   };
   function _sfc_render$6(_ctx, _cache, $props, $setup, $data, $options) {
-    const _component_uni_easyinput = resolveEasycom(vue.resolveDynamicComponent("uni-easyinput"), __easycom_0$8);
-    const _component_uni_forms_item = resolveEasycom(vue.resolveDynamicComponent("uni-forms-item"), __easycom_1$3);
+    const _component_uni_easyinput = resolveEasycom(vue.resolveDynamicComponent("uni-easyinput"), __easycom_0$6);
+    const _component_uni_forms_item = resolveEasycom(vue.resolveDynamicComponent("uni-forms-item"), __easycom_1$1);
     const _component_uni_file_picker = resolveEasycom(vue.resolveDynamicComponent("uni-file-picker"), __easycom_1);
-    const _component_uni_forms = resolveEasycom(vue.resolveDynamicComponent("uni-forms"), __easycom_3$5);
+    const _component_uni_forms = resolveEasycom(vue.resolveDynamicComponent("uni-forms"), __easycom_3$3);
     return vue.openBlock(), vue.createElementBlock("view", { class: "uni-container" }, [
       vue.createVNode(_component_uni_forms, {
         ref: "form",
@@ -23868,7 +24050,7 @@ ${i3}
     }
   };
   function _sfc_render$4(_ctx, _cache, $props, $setup, $data, $options) {
-    const _component_uni_icons = resolveEasycom(vue.resolveDynamicComponent("uni-icons"), __easycom_0$9);
+    const _component_uni_icons = resolveEasycom(vue.resolveDynamicComponent("uni-icons"), __easycom_0$7);
     return vue.openBlock(), vue.createElementBlock("view", { class: "uni-cursor-point" }, [
       $props.popMenu && ($options.leftBottom || $options.rightBottom || $options.leftTop || $options.rightTop) && $props.content.length > 0 ? (vue.openBlock(), vue.createElementBlock(
         "view",
@@ -24017,7 +24199,7 @@ ${i3}
   };
   function _sfc_render$3(_ctx, _cache, $props, $setup, $data, $options) {
     const _component_uni_list_item = resolveEasycom(vue.resolveDynamicComponent("uni-list-item"), __easycom_0$2);
-    const _component_uni_list = resolveEasycom(vue.resolveDynamicComponent("uni-list"), __easycom_1$1);
+    const _component_uni_list = resolveEasycom(vue.resolveDynamicComponent("uni-list"), __easycom_1$2);
     const _component_uni_load_more = resolveEasycom(vue.resolveDynamicComponent("uni-load-more"), __easycom_0);
     const _component_unicloud_db = resolveEasycom(vue.resolveDynamicComponent("unicloud-db"), __easycom_3);
     const _component_uni_fab = resolveEasycom(vue.resolveDynamicComponent("uni-fab"), __easycom_4);
@@ -24546,7 +24728,7 @@ ${i3}
       ]))
     ]);
   }
-  const PagesSearchAllReviews = /* @__PURE__ */ _export_sfc(_sfc_main$1, [["render", _sfc_render], ["__file", "G:/mobile application development/pdd/pages/search/AllReviews.vue"]]);
+  const PagesSearchAllReviews = /* @__PURE__ */ _export_sfc(_sfc_main$1, [["render", _sfc_render], ["__scopeId", "data-v-e2a772c1"], ["__file", "G:/mobile application development/pdd/pages/search/AllReviews.vue"]]);
   __definePage("uni_modules/uni-id-pages/pages/login/login-withpwd", UniModulesUniIdPagesPagesLoginLoginWithpwd);
   __definePage("pages/index/index", PagesIndexIndex);
   __definePage("uni_modules/uni-id-pages/pages/register/register", UniModulesUniIdPagesPagesRegisterRegister);
@@ -24585,13 +24767,31 @@ ${i3}
   __definePage("pages/search/AllReviews", PagesSearchAllReviews);
   const _sfc_main = {
     onLaunch: function() {
-      formatAppLog("log", "at App.vue:4", "pdd应用启动");
+      formatAppLog("log", "at App.vue:4", "pdd应用启动"), this.checkLogin();
     },
     onShow: function() {
-      formatAppLog("log", "at App.vue:7", "pdd应用进入首页");
+      formatAppLog("log", "at App.vue:8", "pdd应用进入首页");
     },
     onHide: function() {
-      formatAppLog("log", "at App.vue:10", "pdd应用进入后台");
+      formatAppLog("log", "at App.vue:11", "pdd应用进入后台");
+    },
+    methods: {
+      async checkLogin() {
+        try {
+          const token = uni.getStorageSync("uni_id_token");
+          if (!token) {
+            throw new Error("无token");
+          }
+          uni.switchTab({
+            url: "/pages/index/index"
+          });
+        } catch (e) {
+          formatAppLog("log", "at App.vue:27", "未登录或登录已过期:", e);
+          uni.reLaunch({
+            url: "/uni_modules/uni-id-pages/pages/login/login-withpwd"
+          });
+        }
+      }
     }
   };
   const App = /* @__PURE__ */ _export_sfc(_sfc_main, [["__file", "G:/mobile application development/pdd/App.vue"]]);
